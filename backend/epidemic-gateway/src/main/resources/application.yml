@@ -1,0 +1,62 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: epidemic-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.213.130:8848
+      config:
+        server-addr: 192.168.213.130:8848
+        file-extension: yaml
+        import-check:
+          enabled: false
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: epidemic-user-service-api
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/user/**,/api/auth/**
+          filters:
+            - StripPrefix=1
+        - id: epidemic-user-service-auth
+          uri: http://localhost:8081
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=0
+        - id: epidemic-material-service
+          uri: lb://epidemic-material-service
+          predicates:
+            - Path=/api/material/**,/api/application/**,/api/donation/**,/api/stats/**
+          filters:
+            - StripPrefix=1
+        - id: epidemic-pandemic-service
+          uri: lb://epidemic-pandemic-service
+          predicates:
+            - Path=/api/pandemic/**
+          filters:
+            - StripPrefix=1
+#      globalcors:
+#        cors-configurations:
+#          '[/**]':
+#            allowedOrigins: "*"
+#            allowedMethods:
+#              - GET
+#              - POST
+#              - PUT
+#              - DELETE
+#              - OPTIONS
+#            allowedHeaders: "*"
+#            allowCredentials: true
+#            maxAge: 3600
+
+logging:
+  level:
+    com.epidemic: debug
