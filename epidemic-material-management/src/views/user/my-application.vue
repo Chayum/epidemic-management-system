@@ -30,11 +30,15 @@
         <el-table-column prop="quantity" label="申请数量" width="100" />
         <el-table-column prop="urgency" label="紧急程度" width="90">
           <template #default="{ row }">
-            <el-tag :type="getUrgencyType(row.urgency)" size="small">{{ row.urgencyText }}</el-tag>
+            <el-tag :type="getUrgencyType(row.urgency)" size="small">{{ getUrgencyText(row.urgency) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="purpose" label="用途说明" min-width="150" show-overflow-tooltip />
-        <el-table-column prop="applyTime" label="申请时间" width="160" />
+        <el-table-column prop="applyTime" label="申请时间" width="160">
+          <template #default="{ row }">
+            {{ formatTime(row.applyTime) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
@@ -65,13 +69,13 @@
         <el-descriptions-item label="物资名称">{{ currentRow.materialName }}</el-descriptions-item>
         <el-descriptions-item label="申请数量">{{ currentRow.quantity }}</el-descriptions-item>
         <el-descriptions-item label="紧急程度">
-          <el-tag :type="getUrgencyType(currentRow.urgency)">{{ currentRow.urgencyText }}</el-tag>
+          <el-tag :type="getUrgencyType(currentRow.urgency)">{{ getUrgencyText(currentRow.urgency) }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="用途说明">{{ currentRow.purpose }}</el-descriptions-item>
         <el-descriptions-item label="收货地址">{{ currentRow.address }}</el-descriptions-item>
         <el-descriptions-item label="收货人">{{ currentRow.receiver }}</el-descriptions-item>
-        <el-descriptions-item label="申请时间">{{ currentRow.applyTime }}</el-descriptions-item>
-        <el-descriptions-item label="审核时间">{{ currentRow.approveTime || '待审核' }}</el-descriptions-item>
+        <el-descriptions-item label="申请时间">{{ formatTime(currentRow.applyTime) }}</el-descriptions-item>
+        <el-descriptions-item label="审核时间">{{ currentRow.approveTime ? formatTime(currentRow.approveTime) : '待审核' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="getStatusType(currentRow.status)">{{ getStatusText(currentRow.status) }}</el-tag>
         </el-descriptions-item>
@@ -82,9 +86,11 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { getMyApplications } from '@/api/application'
+import dayjs from 'dayjs'
 
 const router = useRouter()
 const loading = ref(false)
@@ -99,42 +105,79 @@ const searchForm = reactive({
 const pagination = reactive({
   page: 1,
   size: 10,
-  total: 15
+  total: 0
 })
 
-const tableData = ref([
-  { id: 'A2026024', materialName: 'N95医用口罩', quantity: 1000, urgency: 'critical', urgencyText: '紧急', purpose: 'ICU急需N95口罩', address: '市第一医院', receiver: '张三', applyTime: '2026-02-24 10:30:00', status: 'pending', approveTime: '' },
-  { id: 'A2026023', materialName: '医用防护服', quantity: 500, urgency: 'urgent', urgencyText: '较急', purpose: '一线医护人员防护', address: '市第一医院', receiver: '张三', applyTime: '2026-02-24 09:45:00', status: 'approved', approveTime: '2026-02-24 11:00:00' },
-  { id: 'A2026022', materialName: '84消毒液', quantity: 200, urgency: 'normal', urgencyText: '普通', purpose: '日常消杀使用', address: '市第一医院', receiver: '张三', applyTime: '2026-02-24 09:15:00', status: 'approved', approveTime: '2026-02-24 10:30:00' },
-  { id: 'A2026021', materialName: '检测试剂', quantity: 1000, urgency: 'urgent', urgencyText: '较急', purpose: '核酸检测使用', address: '市第一医院', receiver: '张三', applyTime: '2026-02-23 16:20:00', status: 'rejected', approveTime: '2026-02-23 18:00:00', rejectReason: '库存不足' },
-  { id: 'A2026020', materialName: '一次性手套', quantity: 500, urgency: 'normal', urgencyText: '普通', purpose: '日常防护', address: '市第一医院', receiver: '张三', applyTime: '2026-02-23 14:00:00', status: 'approved', approveTime: '2026-02-23 16:30:00' }
-])
+const tableData = ref([])
 
 const getUrgencyType = (urgency) => {
-  const typeMap = { critical: 'danger', urgent: 'warning', normal: '' }
-  return typeMap[urgency] || ''
+  const typeMap = { critical: 'danger', urgent: 'warning', normal: 'info' }
+  return typeMap[urgency] || 'info'
+}
+
+const getUrgencyText = (urgency) => {
+  const textMap = { critical: '紧急', urgent: '较急', normal: '普通' }
+  return textMap[urgency] || '普通'
 }
 
 const getStatusType = (status) => {
-  const typeMap = { pending: 'warning', approved: 'success', rejected: 'danger' }
-  return typeMap[status] || ''
+  const typeMap = { pending: 'warning', approved: 'success', rejected: 'danger', cancelled: 'info' }
+  return typeMap[status] || 'info'
 }
 
 const getStatusText = (status) => {
-  const textMap = { pending: '待审核', approved: '已通过', rejected: '已驳回' }
-  return textMap[status] || ''
+  const textMap = { pending: '待审核', approved: '已通过', rejected: '已驳回', cancelled: '已取消' }
+  return textMap[status] || '未知状态'
+}
+
+const formatTime = (time) => {
+  if (!time) return ''
+  return dayjs(time).format('YYYY-MM-DD HH:mm:ss')
+}
+
+const fetchData = async () => {
+  loading.value = true
+  try {
+    const params = {
+      page: pagination.page,
+      size: pagination.size,
+      id: searchForm.id || undefined,
+      status: searchForm.status || undefined
+    }
+    const res = await getMyApplications(params)
+    if (res.code === 200) {
+      tableData.value = res.data.list
+      pagination.total = res.data.total
+    } else {
+      ElMessage.error(res.message || '获取申请列表失败')
+    }
+  } catch (error) {
+    console.error('获取申请列表出错', error)
+    ElMessage.error('获取申请列表出错')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleSearch = () => {
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-  }, 500)
+  pagination.page = 1
+  fetchData()
 }
 
 const handleReset = () => {
   Object.assign(searchForm, { id: '', status: '' })
   handleSearch()
+}
+
+const handlePageChange = (page) => {
+  pagination.page = page
+  fetchData()
+}
+
+const handleSizeChange = (size) => {
+  pagination.size = size
+  pagination.page = 1
+  fetchData()
 }
 
 const handleView = (row) => {
@@ -144,11 +187,16 @@ const handleView = (row) => {
 
 const handleTrack = (row) => {
   if (row.status === 'approved') {
-    ElMessage.info('查看物流追踪信息')
+    // 实际项目中应跳转到物流详情页或弹窗显示
+    router.push(`/user/track?id=${row.id}`)
   } else {
     ElMessage.warning('申请未通过审核，无法追踪')
   }
 }
+
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <style scoped lang="scss">

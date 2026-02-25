@@ -127,7 +127,7 @@
 import { ref, onMounted, computed } from 'vue'
 import * as echarts from 'echarts'
 import dayjs from 'dayjs'
-import { getDashboardStats } from '@/api/stats'
+import { getDashboardStats, getTrendData, getMaterialStats } from '@/api/stats'
 import { getApplicationList } from '@/api/application'
 import { getMaterialList } from '@/api/material'
 
@@ -200,66 +200,88 @@ const fetchDashboardData = async () => {
   loading.value = false
 }
 
-const initTrendChart = () => {
+const initTrendChart = async () => {
   const chart = echarts.init(trendChartRef.value)
-  const option = {
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['入库', '出库'], bottom: 0 },
-    grid: { left: '3%', right: '4%', bottom: '10%', top: '10%', containLabel: true },
-    xAxis: {
-      type: 'category',
-      boundaryGap: false,
-      data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-    },
-    yAxis: { type: 'value' },
-    series: [
-      {
-        name: '入库',
-        type: 'line',
-        smooth: true,
-        data: [120, 132, 101, 134, 190, 230, 210],
-        areaStyle: { color: 'rgba(24, 144, 255, 0.1)' },
-        itemStyle: { color: '#1890ff' }
-      },
-      {
-        name: '出库',
-        type: 'line',
-        smooth: true,
-        data: [80, 92, 91, 124, 180, 150, 120],
-        areaStyle: { color: 'rgba(82, 196, 26, 0.1)' },
-        itemStyle: { color: '#52c41a' }
-      }
-    ]
-  }
-  chart.setOption(option)
-}
-
-const initPieChart = () => {
-  const chart = echarts.init(pieChartRef.value)
-  const option = {
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { orient: 'vertical', right: 10, top: 'center' },
-    series: [
-      {
-        type: 'pie',
-        radius: ['40%', '70%'],
-        center: ['35%', '50%'],
-        avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-        label: { show: false },
-        emphasis: {
-          label: { show: true, fontSize: 14, fontWeight: 'bold' }
+  
+  try {
+    const res = await getTrendData({ period: chartPeriod.value })
+    if (res.code === 200) {
+      const data = res.data
+      const option = {
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['入库', '出库'], bottom: 0 },
+        grid: { left: '3%', right: '4%', bottom: '10%', top: '10%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: data.dates
         },
-        data: [
-          { value: 4500, name: '防护物资', itemStyle: { color: '#1890ff' } },
-          { value: 2800, name: '消杀物资', itemStyle: { color: '#52c41a' } },
-          { value: 3200, name: '检测物资', itemStyle: { color: '#faad14' } },
-          { value: 2356, name: '其他', itemStyle: { color: '#722ed1' } }
+        yAxis: { type: 'value' },
+        series: [
+          {
+            name: '入库',
+            type: 'line',
+            smooth: true,
+            data: data.inbound,
+            areaStyle: { color: 'rgba(24, 144, 255, 0.1)' },
+            itemStyle: { color: '#1890ff' }
+          },
+          {
+            name: '出库',
+            type: 'line',
+            smooth: true,
+            data: data.outbound,
+            areaStyle: { color: 'rgba(82, 196, 26, 0.1)' },
+            itemStyle: { color: '#52c41a' }
+          }
         ]
       }
-    ]
+      chart.setOption(option)
+    }
+  } catch (error) {
+    console.error('获取趋势数据失败:', error)
   }
-  chart.setOption(option)
+}
+
+const initPieChart = async () => {
+  const chart = echarts.init(pieChartRef.value)
+  
+  try {
+    const res = await getMaterialStats()
+    if (res.code === 200) {
+      const data = res.data.map(item => ({
+        value: item.value,
+        name: item.name,
+        itemStyle: { 
+          color: item.name === '防护物资' ? '#1890ff' : 
+                 item.name === '消杀物资' ? '#52c41a' : 
+                 item.name === '检测物资' ? '#faad14' : '#722ed1' 
+        }
+      }))
+      
+      const option = {
+        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+        legend: { orient: 'vertical', right: 10, top: 'center' },
+        series: [
+          {
+            type: 'pie',
+            radius: ['40%', '70%'],
+            center: ['35%', '50%'],
+            avoidLabelOverlap: false,
+            itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+            label: { show: false },
+            emphasis: {
+              label: { show: true, fontSize: 14, fontWeight: 'bold' }
+            },
+            data: data
+          }
+        ]
+      }
+      chart.setOption(option)
+    }
+  } catch (error) {
+    console.error('获取物资分布失败:', error)
+  }
 }
 
 onMounted(() => {

@@ -135,35 +135,69 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
+import { getUserStats, getWarningList } from '@/api/stats'
+import { getNewsList } from '@/api/pandemic'
 
 const currentDate = computed(() => dayjs().format('YYYY年MM月DD日'))
 
 const stats = ref([
-  { label: '我的申领', value: '5', icon: 'Document', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
-  { label: '待审核', value: '2', icon: 'Clock', color: '#faad14', bgColor: '#fffbe6', iconBg: '#ffe7ba' },
-  { label: '我的捐赠', value: '3', icon: 'Present', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' }
+  { label: '我的申领', value: '0', icon: 'Document', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
+  { label: '待审核', value: '0', icon: 'Clock', color: '#faad14', bgColor: '#fffbe6', iconBg: '#ffe7ba' },
+  { label: '我的捐赠', value: '0', icon: 'Present', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' }
 ])
 
-const newsList = ref([
-  { id: 1, tag: '疫情通报', tagType: 'red', title: '最新疫情通报：今日新增确诊病例5例', time: '2026-02-24' },
-  { id: 2, tag: '防控指南', tagType: 'blue', title: '社区防控指南（第二版）发布', time: '2026-02-23' },
-  { id: 3, tag: '政策解读', tagType: 'green', title: '关于进一步优化防控措施的通知', time: '2026-02-22' },
-  { id: 4, tag: '健康科普', tagType: 'orange', title: '如何正确佩戴N95口罩', time: '2026-02-21' }
-])
+const newsList = ref([])
+const warningList = ref([])
+const warningCount = ref(0)
 
-const warningCount = ref(3)
-const warningList = ref([
-  { id: 1, name: 'N95医用口罩', stock: 850, level: 'warning' },
-  { id: 2, name: '医用防护服', stock: 420, level: 'warning' },
-  { id: 3, name: '一次性手套', stock: 680, level: 'normal' }
-])
+const fetchHomeData = async () => {
+  try {
+    // 1. Get User Stats
+    const statsRes = await getUserStats()
+    if (statsRes.code === 200) {
+      const data = statsRes.data
+      stats.value[0].value = (data.myApplicationCount || 0).toString()
+      stats.value[1].value = (data.pendingApplicationCount || 0).toString()
+      stats.value[2].value = (data.myDonationCount || 0).toString()
+    }
+
+    // 2. Get Warning List
+    const warningRes = await getWarningList()
+    if (warningRes.code === 200) {
+      const list = warningRes.data || []
+      warningList.value = list.map(item => ({
+        ...item,
+        level: item.warningLevel === 'high' ? 'warning' : 'normal'
+      }))
+      warningCount.value = list.length
+    }
+
+    // 3. Get News
+    const newsRes = await getNewsList({ page: 1, size: 5, status: 'published' })
+    if (newsRes.code === 200) {
+      newsList.value = (newsRes.data.list || []).map(item => ({
+        id: item.id,
+        tag: '动态', // Default tag or map from item.type if available
+        tagType: 'blue',
+        title: item.title,
+        time: dayjs(item.publishTime).format('YYYY-MM-DD')
+      }))
+    }
+  } catch (error) {
+    console.error(error)
+  }
+}
 
 const handleViewNews = (news) => {
   ElMessage.info(`查看: ${news.title}`)
 }
+
+onMounted(() => {
+  fetchHomeData()
+})
 </script>
 
 <style scoped lang="scss">

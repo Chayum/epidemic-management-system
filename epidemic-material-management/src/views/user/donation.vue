@@ -205,6 +205,7 @@
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, InfoFilled, CircleCheck, Phone, Message } from '@element-plus/icons-vue'
+import { submitDonation } from '@/api/donation'
 
 const donationFormRef = ref(null)
 const currentStep = ref(0)
@@ -259,13 +260,29 @@ const handleNextStep = async () => {
   })
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   submitting.value = true
-  setTimeout(() => {
+  try {
+    const submitData = {
+      ...donationForm,
+      materialName: donationForm.name
+    }
+    // 移除不必要的字段
+    delete submitData.name
+    
+    const res = await submitDonation(submitData)
+    if (res.code === 200) {
+      currentStep.value = 2
+      ElMessage.success('捐赠提交成功')
+    } else {
+      ElMessage.error(res.message || '提交失败')
+    }
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('提交失败，请重试')
+  } finally {
     submitting.value = false
-    currentStep.value = 2
-    ElMessage.success('捐赠提交成功')
-  }, 1500)
+  }
 }
 
 const handleReset = () => {

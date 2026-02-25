@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 获取疫情新闻列表
 export const getNewsList = (params) => {
   return request({
-    url: '/pandemic/news',
+    url: '/stats/news/list',
     method: 'get',
     params
   })
@@ -12,7 +12,7 @@ export const getNewsList = (params) => {
 // 获取新闻详情
 export const getNewsDetail = (id) => {
   return request({
-    url: `/pandemic/news/${id}`,
+    url: `/stats/news/${id}`,
     method: 'get'
   })
 }
@@ -65,5 +65,30 @@ export const getPandemicData = () => {
   return request({
     url: '/pandemic/data',
     method: 'get'
+  })
+}
+
+// 获取推送统计
+export const getPushStats = () => {
+  return request({
+    url: '/pandemic/push/stats',
+    method: 'get'
+  })
+}
+
+// 获取推送记录
+export const getPushList = () => {
+  return request({
+    url: '/pandemic/push/list',
+    method: 'get'
+  })
+}
+
+// 发送推送
+export const sendPush = (data) => {
+  return request({
+    url: '/pandemic/push',
+    method: 'post',
+    data
   })
 }

@@ -14,9 +14,9 @@
             :router="true"
           >
             <el-menu-item index="/user/home">首页</el-menu-item>
-            <el-menu-item index="/user/donation">我要捐赠</el-menu-item>
-            <el-menu-item index="/user/apply">物资申领</el-menu-item>
-            <el-menu-item index="/user/my-application">我的申请</el-menu-item>
+            <el-menu-item v-if="canDonate" index="/user/donation">我要捐赠</el-menu-item>
+            <el-menu-item v-if="canApply" index="/user/apply">物资申领</el-menu-item>
+            <el-menu-item v-if="canApply" index="/user/my-application">我的申请</el-menu-item>
           </el-menu>
           <el-dropdown @command="handleCommand">
             <div class="user-info">
@@ -47,7 +47,7 @@
     <main class="user-main">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
-          <component :is="Component" />
+          <component :is="Component" :key="route.fullPath" />
         </transition>
       </router-view>
     </main>
@@ -61,20 +61,22 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
-const userInfo = ref({
-  name: '张三',
-  role: 'hospital_user',
-  unit: '市第一医院'
-})
+const userInfo = computed(() => userStore.userInfo || {})
+const userRole = computed(() => userStore.userRole)
+const canDonate = computed(() => ['donor', 'community_staff', 'hospital_user'].includes(userRole.value))
+const canApply = computed(() => ['hospital_user', 'community_staff'].includes(userRole.value))
 
 const activeMenu = computed(() => route.path)
 
 const handleCommand = (command) => {
   if (command === 'logout') {
+    userStore.logout()
     router.push('/user/login')
   } else if (command === 'profile') {
     router.push('/user/profile')

@@ -94,7 +94,7 @@
       <main class="main-content">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
-            <component :is="Component" />
+            <component :is="Component" :key="route.fullPath" />
           </transition>
         </router-view>
       </main>
@@ -105,15 +105,14 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 const isCollapsed = ref(false)
-const userInfo = ref({
-  name: '管理员',
-  role: 'admin'
-})
+const userInfo = computed(() => userStore.userInfo || {})
 
 const activeMenu = computed(() => route.path)
 const currentRoute = computed(() => route)
@@ -124,6 +123,7 @@ const toggleCollapse = () => {
 
 const handleCommand = (command) => {
   if (command === 'logout') {
+    userStore.logout()
     router.push('/login')
   } else if (command === 'profile') {
     router.push('/user-manage/profile')

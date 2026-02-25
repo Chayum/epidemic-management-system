@@ -53,6 +53,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         log.error("系统异常：", e);
-        return Result.error(500, "系统异常，请联系管理员");
+        // 开发环境可以暴露详细异常，这里为了排查问题暂时暴露
+        return Result.error(500, "系统异常：" + e.toString());
     }
 }

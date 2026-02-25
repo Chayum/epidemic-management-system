@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.util.Objects;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final UserService userService;
@@ -43,9 +45,9 @@ public class AuthController {
         if (!"active".equals(user.getStatus())) {
             return Result.error("账户已被禁用");
         }
-
+        //生成jwt令牌
         String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
-
+        log.info("jwt:#{}",token);
         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo();
         userInfo.setId(user.getId());
         userInfo.setUsername(user.getUsername());
@@ -84,18 +86,22 @@ public class AuthController {
                                          @RequestBody java.util.Map<String, String> params) {
         String token = authHeader.substring(7);
         Long userId = jwtUtil.getUserIdFromToken(token);
-        String oldPassword = params.get("oldPassword");
-        String newPassword = params.get("newPassword");
+        String oldPwd = params.get("oldPwd");
+        String newPwd = params.get("newPwd");
+
+        if (!StringUtils.hasText(oldPwd) || !StringUtils.hasText(newPwd)) {
+            return Result.error("密码不能为空");
+        }
 
         User user = userService.getUserById(userId);
         
-        if (!Objects.equals(user.getPassword(), oldPassword)) {
+        if (!oldPwd.equals(user.getPassword())) {
             return Result.error("原密码错误");
         }
         
         User updateUser = new User();
         updateUser.setId(userId);
-        updateUser.setPassword(newPassword);
+        updateUser.setPassword(newPwd);
         userService.updateUser(updateUser);
         
         return Result.success("密码修改成功");

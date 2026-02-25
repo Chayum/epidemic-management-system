@@ -88,6 +88,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Promotion } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
+import { getPushStats, getPushList, sendPush } from '@/api/pandemic'
 
 const dialogVisible = ref(false)
 const formRef = ref(null)
@@ -107,19 +108,40 @@ const formRules = {
   channel: [{ type: 'array', required: true, message: '请选择推送渠道', trigger: 'change' }]
 }
 
-const pushStats = ref([
-  { label: '推送总数', value: '1,256', icon: 'Promotion', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
-  { label: '今日推送', value: '28', icon: 'Clock', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' },
-  { label: '推送成功', value: '1,234', icon: 'CircleCheck', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' },
-  { label: '推送失败', value: '22', icon: 'Warning', color: '#f5222d', bgColor: '#fff1f0', iconBg: '#ffccc7' }
-])
+const pushStats = ref([])
 
-const pushRecords = ref([
-  { title: '物资紧缺提醒', target: '医院用户', channelList: ['APP', 'SMS'], time: '2026-02-24 10:30:00', status: '成功' },
-  { title: '新政策发布', target: '全部用户', channelList: ['APP', 'WEB'], time: '2026-02-24 09:00:00', status: '成功' },
-  { title: '库存预警通知', target: '物资审核员', channelList: ['APP'], time: '2026-02-23 16:20:00', status: '成功' },
-  { title: '社区防控指南', target: '社区人员', channelList: ['APP', 'SMS'], time: '2026-02-23 14:00:00', status: '失败' }
-])
+const pushRecords = ref([])
+
+const fetchStats = async () => {
+  try {
+    const res = await getPushStats()
+    if (res.code === 200) {
+      const styles = {
+        '推送总数': { icon: 'Promotion', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
+        '今日推送': { icon: 'Clock', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' },
+        '推送成功': { icon: 'CircleCheck', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' },
+        '推送失败': { icon: 'Warning', color: '#f5222d', bgColor: '#fff1f0', iconBg: '#ffccc7' }
+      }
+      pushStats.value = res.data.map(item => ({
+        ...item,
+        ...styles[item.label]
+      }))
+    }
+  } catch (error) {
+    console.error('获取推送统计失败', error)
+  }
+}
+
+const fetchRecords = async () => {
+  try {
+    const res = await getPushList()
+    if (res.code === 200) {
+      pushRecords.value = res.data
+    }
+  } catch (error) {
+    console.error('获取推送记录失败', error)
+  }
+}
 
 const initRoleChart = () => {
   const chart = echarts.init(roleChartRef.value)
@@ -156,15 +178,26 @@ const handlePush = () => {
 
 const handleSubmit = async () => {
   if (!formRef.value) return
-  await formRef.value.validate((valid) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
-      ElMessage.success('推送发送成功')
-      dialogVisible.value = false
+      try {
+        const res = await sendPush(form)
+        if (res.code === 200) {
+          ElMessage.success('推送发送成功')
+          dialogVisible.value = false
+          fetchStats()
+          fetchRecords()
+        }
+      } catch (error) {
+        ElMessage.error('推送发送失败')
+      }
     }
   })
 }
 
 onMounted(() => {
+  fetchStats()
+  fetchRecords()
   initRoleChart()
 })
 </script>

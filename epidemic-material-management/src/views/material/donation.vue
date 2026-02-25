@@ -9,9 +9,6 @@
         <div class="card-container">
           <h3 class="section-title">捐赠登记</h3>
           <el-form ref="donationFormRef" :model="donationForm" :rules="donationRules" label-width="100px">
-            <el-form-item label="物资名称" prop="name">
-              <el-input v-model="donationForm.name" placeholder="请输入物资名称" />
-            </el-form-item>
             <el-form-item label="物资类型" prop="type">
               <el-select v-model="donationForm.type" placeholder="请选择物资类型" style="width: 100%">
                 <el-option label="防护物资" value="protective" />
@@ -19,32 +16,38 @@
                 <el-option label="检测物资" value="testing" />
               </el-select>
             </el-form-item>
-            <el-form-item label="数量" prop="quantity">
-              <el-input-number v-model="donationForm.quantity" :min="1" :max="100000" style="width: 100%" />
+            <el-form-item label="物资名称" prop="materialName">
+              <el-input v-model="donationForm.materialName" placeholder="请输入物资名称" />
+            </el-form-item>
+            <el-form-item label="捐赠数量" prop="quantity">
+              <el-input-number v-model="donationForm.quantity" :min="1" style="width: 100%" />
             </el-form-item>
             <el-form-item label="单位" prop="unit">
-              <el-select v-model="donationForm.unit" placeholder="请选择单位" style="width: 100%">
-                <el-option label="个" value="个" />
-                <el-option label="箱" value="箱" />
-                <el-option label="套" value="套" />
-                <el-option label="瓶" value="瓶" />
-                <el-option label="盒" value="盒" />
-              </el-select>
+              <el-input v-model="donationForm.unit" placeholder="如：个、箱、件" />
             </el-form-item>
-            <el-form-item label="捐赠单位" prop="donorUnit">
-              <el-input v-model="donationForm.donorUnit" placeholder="请输入捐赠单位名称" />
+            <el-form-item label="捐赠来源" prop="source">
+              <el-radio-group v-model="donationForm.source">
+                <el-radio label="personal">个人</el-radio>
+                <el-radio label="enterprise">企业/组织</el-radio>
+              </el-radio-group>
             </el-form-item>
-            <el-form-item label="有效期" prop="expiryDate">
-              <el-date-picker
-                v-model="donationForm.expiryDate"
-                type="date"
-                placeholder="请选择有效期"
-                style="width: 100%"
-                value-format="YYYY-MM-DD"
-              />
+            <el-form-item label="捐赠方名称" prop="donorUnit">
+              <el-input v-model="donationForm.donorUnit" placeholder="请输入个人姓名或企业名称" />
             </el-form-item>
-            <el-form-item label="备注说明">
-              <el-input v-model="donationForm.remark" type="textarea" :rows="3" placeholder="请输入备注说明" />
+            <el-form-item label="联系人" prop="contactPerson">
+              <el-input v-model="donationForm.contactPerson" placeholder="请输入联系人姓名" />
+            </el-form-item>
+            <el-form-item label="联系电话" prop="contactPhone">
+              <el-input v-model="donationForm.contactPhone" placeholder="请输入联系电话" />
+            </el-form-item>
+            <el-form-item label="取货地址" prop="receiveAddress">
+              <el-input v-model="donationForm.receiveAddress" placeholder="请输入取货地址" />
+            </el-form-item>
+            <el-form-item label="生产日期" prop="productionDate">
+              <el-date-picker v-model="donationForm.productionDate" type="date" placeholder="选择生产日期" style="width: 100%" />
+            </el-form-item>
+            <el-form-item label="有效期至" prop="expiryDate">
+              <el-date-picker v-model="donationForm.expiryDate" type="date" placeholder="选择有效期" style="width: 100%" />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="handleSubmitDonation" :loading="submitting">
@@ -57,48 +60,31 @@
       </el-col>
       
       <el-col :xs="24" :lg="10">
-        <div class="card-container donation-stats">
-          <h3 class="section-title">捐赠统计</h3>
-          <div class="stat-item">
-            <div class="stat-icon-wrap" style="background: #e6f7ff;">
-              <el-icon :size="24" color="#1890ff"><Box /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">1,256</div>
-              <div class="stat-label">总捐赠次数</div>
-            </div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-icon-wrap" style="background: #f6ffed;">
-              <el-icon :size="24" color="#52c41a"><CircleCheck /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">45,890</div>
-              <div class="stat-label">物资总数</div>
-            </div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-icon-wrap" style="background: #fffbe6;">
-              <el-icon :size="24" color="#faad14"><OfficeBuilding /></el-icon>
-            </div>
-            <div class="stat-info">
-              <div class="stat-value">86</div>
-              <div class="stat-label">捐赠单位数</div>
+        <div class="card-container donation-list-container">
+          <h3 class="section-title">我的捐赠记录</h3>
+          <div class="donation-list">
+            <el-empty v-if="donationList.length === 0" description="暂无捐赠记录" :image-size="80" />
+            <div v-else v-for="item in donationList" :key="item.id" class="donation-item">
+              <div class="donation-header">
+                <span class="donation-name">{{ item.materialName }}</span>
+                <el-tag :type="getStatusType(item.status)" size="small">{{ getStatusText(item.status) }}</el-tag>
+              </div>
+              <div class="donation-meta">
+                <span>数量: {{ item.quantity }}{{ item.unit }}</span>
+                <span>时间: {{ formatDate(item.donateTime) }}</span>
+              </div>
             </div>
           </div>
         </div>
         
-        <div class="card-container recent-donations">
-          <h3 class="section-title">最近捐赠</h3>
-          <div class="donation-list">
-            <div v-for="item in recentDonations" :key="item.id" class="donation-item">
-              <div class="donation-info">
-                <div class="donation-name">{{ item.name }}</div>
-                <div class="donation-meta">{{ item.donorUnit }} · {{ item.quantity }}{{ item.unit }}</div>
-              </div>
-              <div class="donation-time">{{ item.time }}</div>
-            </div>
-          </div>
+        <div class="card-container donation-tips">
+          <h3 class="section-title">捐赠须知</h3>
+          <ul class="tips-list">
+            <li>请确保捐赠物资符合国家质量标准</li>
+            <li>易燃易爆物品请提前说明</li>
+            <li>提交后会有工作人员与您联系确认取货事宜</li>
+            <li>感谢您的爱心捐赠！</li>
+          </ul>
         </div>
       </el-col>
     </el-row>
@@ -106,49 +92,73 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Box, CircleCheck, OfficeBuilding } from '@element-plus/icons-vue'
+import { Plus } from '@element-plus/icons-vue'
+import { submitDonation, getDonationList } from '@/api/donation'
+import dayjs from 'dayjs'
 
 const donationFormRef = ref(null)
 const submitting = ref(false)
+const donationList = ref([])
 
 const donationForm = reactive({
-  name: '',
   type: '',
+  materialName: '',
   quantity: 1,
   unit: '',
+  source: 'personal',
   donorUnit: '',
-  expiryDate: '',
-  remark: ''
+  contactPerson: '',
+  contactPhone: '',
+  receiveAddress: '',
+  productionDate: '',
+  expiryDate: ''
 })
 
 const donationRules = {
-  name: [{ required: true, message: '请输入物资名称', trigger: 'blur' }],
   type: [{ required: true, message: '请选择物资类型', trigger: 'change' }],
+  materialName: [{ required: true, message: '请输入物资名称', trigger: 'blur' }],
   quantity: [{ required: true, message: '请输入数量', trigger: 'blur' }],
-  unit: [{ required: true, message: '请选择单位', trigger: 'change' }],
-  donorUnit: [{ required: true, message: '请输入捐赠单位', trigger: 'blur' }],
-  expiryDate: [{ required: true, message: '请选择有效期', trigger: 'change' }]
+  unit: [{ required: true, message: '请输入单位', trigger: 'blur' }],
+  donorUnit: [{ required: true, message: '请输入捐赠方名称', trigger: 'blur' }],
+  contactPerson: [{ required: true, message: '请输入联系人', trigger: 'blur' }],
+  contactPhone: [{ required: true, message: '请输入联系电话', trigger: 'blur' }]
 }
 
-const recentDonations = ref([
-  { id: 1, name: 'N95医用口罩', donorUnit: '市慈善总会', quantity: 5000, unit: '个', time: '10:30' },
-  { id: 2, name: '84消毒液', donorUnit: '爱心企业A', quantity: 200, unit: '箱', time: '09:15' },
-  { id: 3, name: '防护服', donorUnit: '市红十字会', quantity: 300, unit: '套', time: '昨天' },
-  { id: 4, name: '医用酒精', donorUnit: '爱心人士', quantity: 150, unit: '瓶', time: '昨天' }
-])
+const fetchMyDonations = async () => {
+  try {
+    // 假设当前用户ID为1，实际应从store获取
+    const res = await getDonationList({ page: 1, size: 20, donorId: 1 })
+    if (res.code === 200) {
+      donationList.value = res.data.list || []
+    }
+  } catch (error) {
+    console.error('获取捐赠记录失败', error)
+  }
+}
 
 const handleSubmitDonation = async () => {
   if (!donationFormRef.value) return
-  await donationFormRef.value.validate((valid) => {
+  await donationFormRef.value.validate(async (valid) => {
     if (valid) {
       submitting.value = true
-      setTimeout(() => {
+      try {
+        const submitData = {
+          ...donationForm,
+          donorId: 1 // Mock User ID
+        }
+        const res = await submitDonation(submitData)
+        if (res.code === 200) {
+          ElMessage.success('捐赠提交成功')
+          handleReset()
+          fetchMyDonations()
+        }
+      } catch (error) {
+        ElMessage.error('提交失败')
+      } finally {
         submitting.value = false
-        ElMessage.success('捐赠登记成功')
-        handleReset()
-      }, 1000)
+      }
     }
   })
 }
@@ -156,15 +166,45 @@ const handleSubmitDonation = async () => {
 const handleReset = () => {
   donationFormRef.value?.resetFields()
   Object.assign(donationForm, {
-    name: '',
     type: '',
+    materialName: '',
     quantity: 1,
     unit: '',
+    source: 'personal',
     donorUnit: '',
-    expiryDate: '',
-    remark: ''
+    contactPerson: '',
+    contactPhone: '',
+    receiveAddress: '',
+    productionDate: '',
+    expiryDate: ''
   })
 }
+
+const getStatusType = (status) => {
+  const map = {
+    pending: 'warning',
+    approved: 'success',
+    rejected: 'danger'
+  }
+  return map[status] || 'info'
+}
+
+const getStatusText = (status) => {
+  const map = {
+    pending: '待审核',
+    approved: '已接收',
+    rejected: '已驳回'
+  }
+  return map[status] || status
+}
+
+const formatDate = (date) => {
+  return dayjs(date).format('YYYY-MM-DD HH:mm')
+}
+
+onMounted(() => {
+  fetchMyDonations()
+})
 </script>
 
 <style scoped lang="scss">
@@ -196,64 +236,27 @@ const handleReset = () => {
   border-bottom: 1px solid #f0f0f0;
 }
 
-.donation-stats {
+.donation-list-container {
   margin-bottom: 20px;
 }
 
-.stat-item {
-  display: flex;
-  align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid #f0f0f0;
-  
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.stat-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  margin-right: 16px;
-}
-
-.stat-info {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: #8c8c8c;
-  margin-top: 4px;
-}
-
-.recent-donations {
-  margin-top: 20px;
-}
-
 .donation-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .donation-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 12px;
   background: #fafafa;
   border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.donation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .donation-name {
@@ -263,13 +266,24 @@ const handleReset = () => {
 }
 
 .donation-meta {
+  display: flex;
+  justify-content: space-between;
   font-size: 12px;
   color: #8c8c8c;
-  margin-top: 4px;
 }
 
-.donation-time {
-  font-size: 12px;
-  color: #8c8c8c;
+.donation-tips {
+  margin-top: 20px;
+}
+
+.tips-list {
+  padding-left: 20px;
+  margin: 0;
+  
+  li {
+    font-size: 13px;
+    color: #595959;
+    line-height: 2;
+  }
 }
 </style>

@@ -64,8 +64,8 @@
               <el-form-item label="收货人" prop="receiver">
                 <el-input v-model="applyForm.receiver" placeholder="请输入收货人姓名" />
               </el-form-item>
-              <el-form-item label="联系电话" prop="phone">
-                <el-input v-model="applyForm.phone" placeholder="请输入收货人联系电话" />
+              <el-form-item label="联系电话" prop="receiverPhone">
+                <el-input v-model="applyForm.receiverPhone" placeholder="请输入收货人联系电话" />
               </el-form-item>
               <el-form-item label="紧急程度" prop="urgency">
                 <el-radio-group v-model="applyForm.urgency">
@@ -134,9 +134,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CircleCheck } from '@element-plus/icons-vue'
+import { getMaterialList } from '@/api/material'
+import { submitApplication, getMyApplications } from '@/api/application'
+import dayjs from 'dayjs'
 
 const materialFormRef = ref(null)
 const applyFormRef = ref(null)
@@ -158,7 +161,7 @@ const applyForm = reactive({
   purpose: '',
   address: '',
   receiver: '',
-  phone: '',
+  receiverPhone: '',
   urgency: 'normal'
 })
 
@@ -167,38 +170,62 @@ const applyRules = {
   purpose: [{ required: true, message: '请输入用途说明', trigger: 'blur' }],
   address: [{ required: true, message: '请输入收货地址', trigger: 'blur' }],
   receiver: [{ required: true, message: '请输入收货人', trigger: 'blur' }],
-  phone: [
+  receiverPhone: [
     { required: true, message: '请输入联系电话', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ]
 }
 
-const materialOptions = ref([
-  { id: 'M001', name: 'N95医用口罩', stock: 850, unit: '个', type: 'protective' },
-  { id: 'M002', name: '医用防护服', stock: 420, unit: '套', type: 'protective' },
-  { id: 'M003', name: '84消毒液', stock: 2500, unit: '瓶', type: 'disinfection' },
-  { id: 'M004', name: '医用酒精', stock: 680, unit: '瓶', type: 'disinfection' },
-  { id: 'M005', name: '检测试剂', stock: 320, unit: '盒', type: 'testing' }
-])
+const materialOptions = ref([])
+const applicationHistory = ref([])
 
 const selectedMaterial = computed(() => {
   return materialOptions.value.find(m => m.id === materialForm.materialId)
 })
 
-const applicationHistory = ref([
-  { id: 'A2026023', name: 'N95医用口罩', quantity: 1000, time: '2026-02-24', status: 'pending' },
-  { id: 'A2026018', name: '84消毒液', quantity: 50, time: '2026-02-22', status: 'approved' },
-  { id: 'A2026015', name: '检测试剂', quantity: 100, time: '2026-02-20', status: 'approved' }
-])
-
 const getStatusType = (status) => {
-  const typeMap = { pending: 'warning', approved: 'success', rejected: 'danger' }
-  return typeMap[status] || ''
+  const typeMap = { pending: 'warning', approved: 'success', rejected: 'danger', cancelled: 'info' }
+  return typeMap[status] || 'info'
 }
 
 const getStatusText = (status) => {
-  const textMap = { pending: '待审核', approved: '已通过', rejected: '已驳回' }
-  return textMap[status] || ''
+  const textMap = { pending: '待审核', approved: '已通过', rejected: '已驳回', cancelled: '已取消' }
+  return textMap[status] || '未知状态'
+}
+
+const fetchMaterials = async () => {
+  try {
+    const res = await getMaterialList({ page: 1, size: 100 })
+    if (res.code === 200) {
+      // 过滤出有库存的物资，或者全部显示
+      materialOptions.value = res.data.list.map(item => ({
+        id: item.id,
+        name: item.name,
+        stock: item.stock,
+        unit: item.unit,
+        type: item.type
+      }))
+    }
+  } catch (error) {
+    console.error('获取物资列表失败', error)
+  }
+}
+
+const fetchMyApplications = async () => {
+  try {
+    const res = await getMyApplications({ page: 1, size: 5 })
+    if (res.code === 200) {
+      applicationHistory.value = res.data.list.map(item => ({
+        id: item.id,
+        name: item.materialName,
+        quantity: item.quantity,
+        time: dayjs(item.applyTime).format('YYYY-MM-DD'),
+        status: item.status
+      }))
+    }
+  } catch (error) {
+    console.error('获取申请记录失败', error)
+  }
 }
 
 const handleTypeChange = () => {
@@ -216,14 +243,28 @@ const handleNextStep = async () => {
 
 const handleSubmit = async () => {
   if (!applyFormRef.value) return
-  await applyFormRef.value.validate((valid) => {
+  await applyFormRef.value.validate(async (valid) => {
     if (valid) {
       submitting.value = true
-      setTimeout(() => {
+      try {
+        const submitData = {
+          ...materialForm,
+          ...applyForm
+        }
+        const res = await submitApplication(submitData)
+        if (res.code === 200) {
+          ElMessage.success('申请提交成功')
+          currentStep.value = 2
+          fetchMyApplications()
+        } else {
+          ElMessage.error(res.message || '提交失败')
+        }
+      } catch (error) {
+        console.error('提交失败', error)
+        ElMessage.error('提交失败')
+      } finally {
         submitting.value = false
-        currentStep.value = 2
-        ElMessage.success('申请提交成功')
-      }, 1500)
+      }
     }
   })
 }
@@ -231,9 +272,14 @@ const handleSubmit = async () => {
 const handleReset = () => {
   materialFormRef.value?.resetFields()
   applyFormRef.value?.resetFields()
-  Object.assign(applyForm, { quantity: 1, purpose: '', address: '', receiver: '', phone: '', urgency: 'normal' })
+  Object.assign(applyForm, { quantity: 1, purpose: '', address: '', receiver: '', receiverPhone: '', urgency: 'normal' })
   currentStep.value = 0
 }
+
+onMounted(() => {
+  fetchMaterials()
+  fetchMyApplications()
+})
 </script>
 
 <style scoped lang="scss">

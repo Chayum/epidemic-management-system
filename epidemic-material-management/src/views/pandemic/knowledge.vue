@@ -3,121 +3,122 @@
     <div class="page-header">
       <h2 class="page-title">防控知识库</h2>
     </div>
-    
-    <el-row :gutter="20">
-      <el-col :xs="24" :lg="6">
-        <div class="category-panel card-container">
-          <h3 class="section-title">知识分类</h3>
-          <div class="category-list">
-            <div
-              v-for="cat in categories"
-              :key="cat.id"
-              class="category-item"
-              :class="{ active: activeCategory === cat.id }"
-              @click="handleCategoryClick(cat.id)"
-            >
-              <el-icon><component :is="cat.icon" /></el-icon>
-              <span>{{ cat.name }}</span>
-              <el-tag size="small">{{ cat.count }}</el-tag>
+
+    <div class="card-container">
+      <div class="knowledge-grid">
+        <div v-for="item in knowledgeList" :key="item.id" class="knowledge-card">
+          <div class="knowledge-icon">
+            <el-icon :size="40" :color="getCategoryColor(item.category)">
+              <component :is="getCategoryIcon(item.category)" />
+            </el-icon>
+          </div>
+          <div class="knowledge-content">
+            <h3 class="knowledge-title">{{ item.title }}</h3>
+            <p class="knowledge-summary">{{ item.summary }}</p>
+            <div class="knowledge-meta">
+              <el-tag size="small" :type="getCategoryType(item.category)">{{ getCategoryText(item.category) }}</el-tag>
+              <span class="view-count"><el-icon><View /></el-icon> {{ item.viewCount }}</span>
             </div>
+            <el-button type="primary" link class="read-btn" @click="handleView(item)">阅读全文</el-button>
           </div>
         </div>
-      </el-col>
+      </div>
       
-      <el-col :xs="24" :lg="18">
-        <div class="search-bar card-container">
-          <el-form :inline="true">
-            <el-form-item label="关键词">
-              <el-input v-model="searchKeyword" placeholder="请输入关键词搜索" clearable style="width: 300px" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="handleSearch">
-                <el-icon><Search /></el-icon>搜索
-              </el-button>
-            </el-form-item>
-          </el-form>
+      <div class="pagination-container">
+        <el-pagination
+          v-model:current-page="page.page"
+          v-model:page-size="page.size"
+          :total="page.total"
+          layout="total, prev, pager, next"
+          @current-change="fetchKnowledge"
+        />
+      </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <el-dialog v-model="detailVisible" title="知识详情" width="700px">
+      <div class="knowledge-detail">
+        <h2 class="detail-title">{{ currentKnowledge.title }}</h2>
+        <div class="detail-meta">
+          <span>来源: {{ currentKnowledge.author }}</span>
+          <span>分类: {{ getCategoryText(currentKnowledge.category) }}</span>
         </div>
-        
-        <div class="knowledge-list">
-          <div v-for="item in filteredList" :key="item.id" class="knowledge-item card-container">
-            <div class="item-header">
-              <div class="item-title">{{ item.title }}</div>
-              <el-tag size="small">{{ item.category }}</el-tag>
-            </div>
-            <div class="item-content">{{ item.summary }}</div>
-            <div class="item-footer">
-              <span class="item-meta">
-                <el-icon><View /></el-icon> {{ item.views }}
-                <el-icon style="margin-left: 12px"><Download /></el-icon> {{ item.downloads }}
-              </span>
-              <el-button type="primary" link @click="handleView(item)">
-                查看详情 <el-icon><ArrowRight /></el-icon>
-              </el-button>
-            </div>
-          </div>
-          
-          <el-empty v-if="filteredList.length === 0" description="暂无数据" />
+        <div class="detail-content">
+          <p>{{ currentKnowledge.summary }}</p>
+          <!-- Mock content as API might not return full content in list -->
+          <p>此处应显示详细内容...</p> 
         </div>
-      </el-col>
-    </el-row>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Search, View, Download, ArrowRight } from '@element-plus/icons-vue'
+import { ref, reactive, onMounted } from 'vue'
+import { View, FirstAidKit, OfficeBuilding, HomeFilled } from '@element-plus/icons-vue'
+import { getKnowledgeList } from '@/api/pandemic'
 
-const activeCategory = ref(1)
-const searchKeyword = ref('')
+const knowledgeList = ref([])
+const page = reactive({ page: 1, size: 12, total: 0 })
+const detailVisible = ref(false)
+const currentKnowledge = ref({})
 
-const categories = ref([
-  { id: 1, name: '个人防护', icon: 'User', count: 45 },
-  { id: 2, name: '社区防控', icon: 'OfficeBuilding', count: 32 },
-  { id: 3, name: '医疗机构指南', icon: 'FirstAidKit', count: 28 },
-  { id: 4, name: '心理健康', icon: 'ChatDotRound', count: 15 }
-])
-
-const knowledgeList = ref([
-  { id: 1, title: '如何正确佩戴N95口罩', category: '个人防护', summary: 'N95口罩的正确佩戴方法及注意事项，包括检查口罩完整性、正确调整鼻夹、确保密封性等步骤。', views: 1256, downloads: 89 },
-  { id: 2, title: '七步洗手法详解', category: '个人防护', summary: '标准七步洗手法操作步骤，使用肥皂或洗手液在流动水下清洗至少20秒。', views: 892, downloads: 156 },
-  { id: 3, title: '社区出入口防控管理指引', category: '社区防控', summary: '社区疫情防控期间出入口管理要求，包括人员登记、体温监测、健康码核验等。', views: 567, downloads: 45 },
-  { id: 4, title: '居家隔离医学观察指南', category: '社区防控', summary: '居家隔离人员注意事项，包括单独居住、佩戴口罩、每日健康监测、环境消毒等。', views: 723, downloads: 67 },
-  { id: 5, title: '医疗机构消毒技术规范', category: '医疗机构指南', summary: '医疗机构日常消毒技术要点，包括物表消毒、空气消毒、医疗废物处理等。', views: 445, downloads: 78 },
-  { id: 6, title: '医护人员防护用品穿脱流程', category: '医疗机构指南', summary: '医护人员个人防护装备（PPE）正确穿脱顺序和注意事项。', views: 634, downloads: 92 },
-  { id: 7, title: '疫情期间心理调适建议', category: '心理健康', summary: '疫情防控期间公众心理调适方法，包括保持规律作息、适度运动、情绪管理技巧等。', views: 389, downloads: 34 },
-  { id: 8, title: '疫情防控违法违规行为警示', category: '个人防护', summary: '疫情防控期间常见违法违规行为及法律后果，呼吁公众遵守防疫规定。', views: 712, downloads: 56 }
-])
-
-const filteredList = computed(() => {
-  let list = knowledgeList.value
-  if (activeCategory.value) {
-    const cat = categories.value.find(c => c.id === activeCategory.value)
-    if (cat) {
-      list = list.filter(item => item.category === cat.name)
+const fetchKnowledge = async () => {
+  try {
+    const res = await getKnowledgeList({ page: page.page, size: page.size })
+    if (res.code === 200) {
+      knowledgeList.value = res.data.list || []
+      page.total = res.data.total || 0
     }
+  } catch (error) {
+    console.error('获取知识库失败', error)
   }
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    list = list.filter(item => 
-      item.title.toLowerCase().includes(keyword) || 
-      item.summary.toLowerCase().includes(keyword)
-    )
-  }
-  return list
-})
-
-const handleCategoryClick = (id) => {
-  activeCategory.value = id
-}
-
-const handleSearch = () => {
-  ElMessage.success('搜索完成')
 }
 
 const handleView = (item) => {
-  ElMessage.info(`查看: ${item.title}`)
+  currentKnowledge.value = item
+  detailVisible.value = true
 }
+
+const getCategoryColor = (category) => {
+  const map = {
+    personal: '#409EFF',
+    community: '#67C23A',
+    hospital: '#F56C6C'
+  }
+  return map[category] || '#909399'
+}
+
+const getCategoryIcon = (category) => {
+  const map = {
+    personal: 'HomeFilled',
+    community: 'OfficeBuilding',
+    hospital: 'FirstAidKit'
+  }
+  return map[category] || 'InfoFilled'
+}
+
+const getCategoryType = (category) => {
+  const map = {
+    personal: '',
+    community: 'success',
+    hospital: 'danger'
+  }
+  return map[category] || 'info'
+}
+
+const getCategoryText = (category) => {
+  const map = {
+    personal: '个人防护',
+    community: '社区防控',
+    hospital: '医疗指南'
+  }
+  return map[category] || category
+}
+
+onMounted(() => {
+  fetchKnowledge()
+})
 </script>
 
 <style scoped lang="scss">
@@ -140,95 +141,109 @@ const handleView = (item) => {
   color: #1a1a1a;
 }
 
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
   margin-bottom: 20px;
 }
 
-.category-panel {
-  margin-bottom: 20px;
-}
-
-.category-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.category-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+.knowledge-card {
+  border: 1px solid #ebeef5;
   border-radius: 8px;
-  cursor: pointer;
+  padding: 20px;
+  display: flex;
+  gap: 15px;
   transition: all 0.3s;
   
   &:hover {
-    background: #f5f5f5;
-  }
-  
-  &.active {
-    background: #e6f7ff;
-    color: #1890ff;
-  }
-  
-  span {
-    flex: 1;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
   }
 }
 
-.search-bar {
+.knowledge-icon {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.knowledge-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.knowledge-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.knowledge-summary {
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 40px;
+}
+
+.knowledge-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.view-count {
+  font-size: 12px;
+  color: #c0c4cc;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.read-btn {
+  padding: 0;
+  margin-top: 8px;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detail-title {
+  text-align: center;
   margin-bottom: 20px;
 }
 
-.knowledge-list {
+.detail-meta {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.knowledge-item {
-  transition: all 0.3s;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-}
-
-.item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.item-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.item-content {
-  font-size: 14px;
-  color: #595959;
-  line-height: 1.8;
-  margin-bottom: 16px;
-}
-
-.item-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.item-meta {
-  display: flex;
-  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  color: #909399;
   font-size: 13px;
-  color: #8c8c8c;
+  margin-bottom: 30px;
+  border-bottom: 1px solid #ebeef5;
+  padding-bottom: 15px;
+}
+
+.detail-content {
+  line-height: 1.8;
+  color: #606266;
+  font-size: 15px;
 }
 </style>

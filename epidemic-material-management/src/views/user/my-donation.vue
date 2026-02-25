@@ -108,9 +108,11 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Medal } from '@element-plus/icons-vue'
+import { Medal, Present, Clock, CircleCheck } from '@element-plus/icons-vue'
+import { getMyDonations } from '@/api/donation'
+import dayjs from 'dayjs'
 
 const loading = ref(false)
 const detailVisible = ref(false)
@@ -125,38 +127,72 @@ const searchForm = reactive({
 const pagination = reactive({
   page: 1,
   size: 10,
-  total: 8
+  total: 0
 })
 
 const stats = ref([
-  { label: '总捐赠次数', value: '8', icon: 'Present', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
-  { label: '待审核', value: '2', icon: 'Clock', color: '#faad14', bgColor: '#fffbe6', iconBg: '#ffe7ba' },
-  { label: '已通过', value: '6', icon: 'CircleCheck', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' }
+  { label: '总捐赠次数', value: '0', icon: 'Present', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
+  { label: '待审核', value: '0', icon: 'Clock', color: '#faad14', bgColor: '#fffbe6', iconBg: '#ffe7ba' },
+  { label: '已通过', value: '0', icon: 'CircleCheck', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' }
 ])
 
-const tableData = ref([
-  { id: 'D2026024', materialName: 'N95医用口罩', quantity: 5000, unit: '个', donorUnit: '市慈善总会', contactPerson: '李四', contactPhone: '13800138001', receiveAddress: '市防疫物资仓库', donateTime: '2026-02-24 10:30:00', status: 'pending', approveTime: '' },
-  { id: 'D2026023', materialName: '84消毒液', quantity: 200, unit: '箱', donorUnit: '爱心企业A', contactPerson: '王五', contactPhone: '13800138002', receiveAddress: '市防疫物资仓库', donateTime: '2026-02-24 09:15:00', status: 'approved', approveTime: '2026-02-24 11:00:00' },
-  { id: 'D2026022', materialName: '防护服', quantity: 300, unit: '套', donorUnit: '市红十字会', contactPerson: '赵六', contactPhone: '13800138003', receiveAddress: '市防疫物资仓库', donateTime: '2026-02-23 15:20:00', status: 'approved', approveTime: '2026-02-23 17:00:00' },
-  { id: 'D2026021', materialName: '医用酒精', quantity: 150, unit: '瓶', donorUnit: '爱心人士', contactPerson: '钱七', contactPhone: '13800138004', receiveAddress: '市防疫物资仓库', donateTime: '2026-02-22 14:00:00', status: 'approved', approveTime: '2026-02-22 16:30:00' },
-  { id: 'D2026020', materialName: '一次性手套', quantity: 1000, unit: '盒', donorUnit: '某企业', contactPerson: '孙八', contactPhone: '13800138005', receiveAddress: '市防疫物资仓库', donateTime: '2026-02-21 10:00:00', status: 'approved', approveTime: '2026-02-21 12:00:00' }
-])
+const tableData = ref([])
 
 const getStatusType = (status) => {
   const typeMap = { pending: 'warning', approved: 'success', rejected: 'danger' }
-  return typeMap[status] || ''
+  return typeMap[status] || 'info'
 }
 
 const getStatusText = (status) => {
   const textMap = { pending: '待审核', approved: '已通过', rejected: '已驳回' }
-  return textMap[status] || ''
+  return textMap[status] || status
+}
+
+const formatDate = (date) => {
+  return date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
+}
+
+const fetchData = async () => {
+  loading.value = true
+  try {
+    const params = {
+      page: pagination.page,
+      size: pagination.size,
+      status: searchForm.status || undefined,
+      id: searchForm.id || undefined
+      // 后端/donation/my接口不需要传donorId，后端会自动从token获取
+    }
+    // 如果有单号查询，虽然DTO没有直接支持id查询，但可以尝试传给后端看看是否需要支持
+    // 目前后端QueryDTO只有 status, donorUnit, donorId, type
+    // 如果需要支持单号查询，需要修改后端。这里暂时忽略单号查询或仅在前端过滤(不推荐)
+    // 假设后端暂不支持单号精确查询，或者我们可以用 type 字段暂代? 不行。
+    // 暂时忽略 searchForm.id，或者修改后端支持。
+    // 考虑到用户需求是“修复假数据”，先确保能查出来。
+    
+    const res = await getMyDonations(params)
+    if (res.code === 200) {
+      tableData.value = res.data.list || []
+      pagination.total = res.data.total || 0
+      
+      // 简单更新一下总数统计
+      stats.value[0].value = pagination.total.toString()
+      // 待审核和已通过无法从分页接口直接获取准确总数，除非后端返回
+      // 暂时保持0或不显示，以免误导。或者仅统计当前页（也不对）。
+      // 这里为了界面不空，可以显示总数，其他两个暂时显示 '-'
+      stats.value[1].value = '-'
+      stats.value[2].value = '-'
+    }
+  } catch (error) {
+    console.error('获取捐赠记录失败', error)
+    ElMessage.error('获取数据失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleSearch = () => {
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-  }, 500)
+  pagination.page = 1
+  fetchData()
 }
 
 const handleReset = () => {
@@ -173,6 +209,10 @@ const handleCertificate = (row) => {
   currentRow.value = row
   certificateVisible.value = true
 }
+
+onMounted(() => {
+  fetchData()
+})
 </script>
 
 <style scoped lang="scss">

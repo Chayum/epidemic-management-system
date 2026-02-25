@@ -40,3 +40,19 @@ export const getTrendData = (params) => {
     params
   })
 }
+
+// 获取用户个人统计数据
+export const getUserStats = () => {
+  return request({
+    url: '/stats/user',
+    method: 'get'
+  })
+}
+
+// 获取库存预警列表
+export const getWarningList = () => {
+  return request({
+    url: '/stats/warning',
+    method: 'get'
+  })
+}

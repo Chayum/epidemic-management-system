@@ -7,6 +7,10 @@ const routes = [
     redirect: '/user-manage/list'
   },
   {
+    path: '/user/login',
+    redirect: to => ({ path: '/login', query: { type: 'user' } })
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/login/index.vue'),
@@ -17,12 +21,6 @@ const routes = [
     component: () => import('@/layout/user.vue'),
     redirect: '/user/home',
     children: [
-      {
-        path: 'login',
-        name: 'UserLogin',
-        component: () => import('@/views/user/login.vue'),
-        meta: { title: '用户登录', public: true }
-      },
       {
         path: 'home',
         name: 'UserHome',
@@ -101,6 +99,10 @@ const routes = [
         meta: { title: '物资管理', icon: 'Box', requiresAuth: true, roles: ['admin'] },
         children: [
           {
+            path: '',
+            redirect: 'donation'
+          },
+          {
             path: 'donation',
             name: 'MaterialDonation',
             component: () => import('@/views/material/donation.vue'),
@@ -138,6 +140,10 @@ const routes = [
         meta: { title: '疫情信息', icon: 'DataAnalysis', requiresAuth: true, roles: ['admin'] },
         children: [
           {
+            path: '',
+            redirect: 'news'
+          },
+          {
             path: 'news',
             name: 'PandemicNews',
             component: () => import('@/views/pandemic/news.vue'),
@@ -173,16 +179,18 @@ router.beforeEach((to, from, next) => {
     document.title = `${title} - 疫情防控物资调度管理系统`
   }
 
+  const getLoginPath = () => (to.path.startsWith('/user') ? '/user/login' : '/login')
+
   // 检查是否需要登录
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-    next('/login')
+    next(getLoginPath())
     return
   }
 
   // 检查角色权限
   if (to.meta.roles && to.meta.roles.length > 0) {
     if (!to.meta.roles.includes(userStore.userRole)) {
-      next('/login')
+      next(getLoginPath())
       return
     }
   }

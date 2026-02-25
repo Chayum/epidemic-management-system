@@ -6,7 +6,7 @@
     
     <el-row :gutter="20">
       <el-col :xs="24" :lg="14">
-        <div class="card-container">
+        <div class="card-container" v-loading="loading">
           <h3 class="section-title">申领申请</h3>
           <el-form ref="applyFormRef" :model="applyForm" :rules="applyRules" label-width="100px">
             <el-form-item label="物资类型" prop="type">
@@ -19,7 +19,7 @@
             <el-form-item label="物资名称" prop="materialId">
               <el-select v-model="applyForm.materialId" placeholder="请选择物资" style="width: 100%">
                 <el-option
-                  v-for="item in materialOptions"
+                  v-for="item in filteredMaterialOptions"
                   :key="item.id"
                   :label="`${item.name} (库存: ${item.stock})`"
                   :value="item.id"
@@ -28,7 +28,7 @@
               </el-select>
             </el-form-item>
             <el-form-item label="申请数量" prop="quantity">
-              <el-input-number v-model="applyForm.quantity" :min="1" :max="maxQuantity" style="width: 100%" />
+              <el-input-number v-model="applyForm.quantity" :min="1" :max="maxQuantity || 1" :disabled="!applyForm.materialId || maxQuantity === 0" style="width: 100%" />
               <div class="quantity-tip">当前库存: {{ maxQuantity }}</div>
             </el-form-item>
             <el-form-item label="用途说明" prop="purpose">
@@ -37,11 +37,17 @@
             <el-form-item label="收货地址" prop="address">
               <el-input v-model="applyForm.address" placeholder="请输入收货地址" />
             </el-form-item>
+            <el-form-item label="收货人" prop="receiver">
+              <el-input v-model="applyForm.receiver" placeholder="请输入收货人姓名" />
+            </el-form-item>
+            <el-form-item label="联系电话" prop="receiverPhone">
+              <el-input v-model="applyForm.receiverPhone" placeholder="请输入收货人联系电话" />
+            </el-form-item>
             <el-form-item label="紧急程度" prop="urgency">
               <el-radio-group v-model="applyForm.urgency">
                 <el-radio label="normal">普通</el-radio>
                 <el-radio label="urgent">紧急</el-radio>
-                <el-radio label="critical">紧急</el-radio>
+                <el-radio label="critical">特急</el-radio>
               </el-radio-group>
             </el-form-item>
             <el-form-item>
@@ -107,12 +113,16 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { getMaterialList } from '@/api/material'
+import { submitApplication, getMyApplications } from '@/api/application'
+import dayjs from 'dayjs'
 
 const applyFormRef = ref(null)
 const submitting = ref(false)
+const loading = ref(true)
 const activeTab = ref('pending')
 
 const applyForm = reactive({
@@ -121,6 +131,8 @@ const applyForm = reactive({
   quantity: 1,
   purpose: '',
   address: '',
+  receiver: '',
+  receiverPhone: '',
   urgency: 'normal'
 })
 
@@ -129,31 +141,67 @@ const applyRules = {
   materialId: [{ required: true, message: '请选择物资', trigger: 'change' }],
   quantity: [{ required: true, message: '请输入申请数量', trigger: 'blur' }],
   purpose: [{ required: true, message: '请输入用途说明', trigger: 'blur' }],
-  address: [{ required: true, message: '请输入收货地址', trigger: 'blur' }]
+  address: [{ required: true, message: '请输入收货地址', trigger: 'blur' }],
+  receiver: [{ required: true, message: '请输入收货人', trigger: 'blur' }],
+  receiverPhone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ]
 }
 
-const materialOptions = ref([
-  { id: 'M001', name: 'N95医用口罩', stock: 850, type: 'protective' },
-  { id: 'M002', name: '医用防护服', stock: 420, type: 'protective' },
-  { id: 'M003', name: '84消毒液', stock: 2500, type: 'disinfection' },
-  { id: 'M004', name: '医用酒精', stock: 680, type: 'disinfection' },
-  { id: 'M005', name: '检测试剂', stock: 320, type: 'testing' }
-])
+const materialOptions = ref([])
 
 const maxQuantity = computed(() => {
   const selected = materialOptions.value.find(m => m.id === applyForm.materialId)
   return selected ? selected.stock : 0
 })
 
-const pendingList = ref([
-  { id: 'A2026024', name: 'N95医用口罩', quantity: 1000, time: '2026-02-24 10:30', urgencyText: '紧急' },
-  { id: 'A2026020', name: '医用防护服', quantity: 200, time: '2026-02-23 15:20', urgencyText: '普通' }
-])
+const filteredMaterialOptions = computed(() => {
+  if (!applyForm.type) return materialOptions.value
+  return materialOptions.value.filter(item => item.type === applyForm.type)
+})
 
-const approvedList = ref([
-  { id: 'A2026018', name: '84消毒液', quantity: 50, time: '2026-02-22 09:15' },
-  { id: 'A2026015', name: '检测试剂', quantity: 100, time: '2026-02-20 14:30' }
-])
+const pendingList = ref([])
+const approvedList = ref([])
+
+const fetchMaterials = async () => {
+  try {
+    const res = await getMaterialList({ page: 1, size: 100 })
+    if (res.code === 200) {
+      materialOptions.value = res.data.list.map(item => ({
+        id: item.id,
+        name: item.name,
+        stock: item.stock,
+        type: item.type
+      }))
+    }
+  } catch (error) {
+    console.error('获取物资列表失败', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+const fetchMyApplications = async () => {
+  try {
+    const res = await getMyApplications({ page: 1, size: 20 })
+    if (res.code === 200) {
+      const list = res.data.list.map(item => ({
+        id: item.id,
+        name: item.materialName,
+        quantity: item.quantity,
+        time: dayjs(item.applyTime).format('YYYY-MM-DD HH:mm'),
+        urgencyText: item.urgency === 'critical' ? '特急' : (item.urgency === 'urgent' ? '紧急' : '普通'),
+        status: item.status
+      }))
+      
+      pendingList.value = list.filter(item => item.status === 'pending')
+      approvedList.value = list.filter(item => item.status === 'approved')
+    }
+  } catch (error) {
+    console.error('获取申请列表失败', error)
+  }
+}
 
 const handleTypeChange = () => {
   applyForm.materialId = ''
@@ -162,14 +210,29 @@ const handleTypeChange = () => {
 
 const handleSubmitApply = async () => {
   if (!applyFormRef.value) return
-  await applyFormRef.value.validate((valid) => {
+  await applyFormRef.value.validate(async (valid) => {
     if (valid) {
       submitting.value = true
-      setTimeout(() => {
+      try {
+        const material = materialOptions.value.find(m => m.id === applyForm.materialId)
+        const submitData = {
+          ...applyForm,
+          materialName: material ? material.name : ''
+        }
+        
+        const res = await submitApplication(submitData)
+        if (res.code === 200) {
+          ElMessage.success('申请提交成功')
+          handleReset()
+          fetchMyApplications()
+        } else {
+          ElMessage.error(res.message || '申请提交失败')
+        }
+      } catch (error) {
+        ElMessage.error('申请提交失败')
+      } finally {
         submitting.value = false
-        ElMessage.success('申请提交成功')
-        handleReset()
-      }, 1000)
+      }
     }
   })
 }
@@ -182,9 +245,16 @@ const handleReset = () => {
     quantity: 1,
     purpose: '',
     address: '',
+    receiver: '',
+    receiverPhone: '',
     urgency: 'normal'
   })
 }
+
+onMounted(() => {
+  fetchMaterials()
+  fetchMyApplications()
+})
 </script>
 
 <style scoped lang="scss">
