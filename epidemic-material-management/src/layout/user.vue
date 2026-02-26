@@ -12,11 +12,13 @@
             :default-active="activeMenu"
             class="header-menu"
             :router="true"
+            :ellipsis="false"
           >
             <el-menu-item index="/user/home">首页</el-menu-item>
             <el-menu-item v-if="canDonate" index="/user/donation">我要捐赠</el-menu-item>
             <el-menu-item v-if="canApply" index="/user/apply">物资申领</el-menu-item>
             <el-menu-item v-if="canApply" index="/user/my-application">我的申请</el-menu-item>
+            <el-menu-item v-if="canDonate" index="/user/my-donation">我的捐赠</el-menu-item>
           </el-menu>
           <el-dropdown @command="handleCommand">
             <div class="user-info">
@@ -62,6 +64,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { FirstAidKit, User, Setting, SwitchButton, ArrowDown, More } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

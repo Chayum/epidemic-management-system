@@ -108,7 +108,8 @@ const userStore = useUserStore()
 const loginFormRef = ref(null)
 const loading = ref(false)
 
-// 角色定义
+// 角色定义配置
+// 包含角色值、显示名称、描述和图标
 const roles = [
   { 
     value: 'hospital_user', 
@@ -130,17 +131,21 @@ const roles = [
   }
 ]
 
-// 状态
-const selectedRole = ref('hospital_user')
+// 响应式状态
+const selectedRole = ref('hospital_user') // 当前选中的角色
 const loginForm = reactive({
   username: '',
   password: ''
 })
 
-// 根据路由参数判断当前模式
+// 根据路由参数判断当前是否为用户登录模式
+// query.type === 'user' 表示用户端登录，否则默认为管理端
 const isUserLogin = computed(() => route.query.type === 'user')
 
-// 切换模式
+/**
+ * 切换登录模式（管理员/用户）
+ * 通过修改路由参数 type 来实现模式切换
+ */
 const toggleMode = () => {
   const targetType = isUserLogin.value ? undefined : 'user'
   router.replace({ 
@@ -152,6 +157,7 @@ const toggleMode = () => {
   })
 }
 
+// 表单校验规则
 const loginRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' }
@@ -162,6 +168,13 @@ const loginRules = {
   ]
 }
 
+/**
+ * 处理登录逻辑
+ * 1. 校验表单
+ * 2. 根据模式确定登录角色
+ * 3. 调用 Store 的登录 Action
+ * 4. 登录成功后跳转到相应首页
+ */
 const handleLogin = async () => {
   if (!loginFormRef.value) return
   
@@ -181,6 +194,8 @@ const handleLogin = async () => {
         ElMessage.success('登录成功')
         
         // 根据角色跳转不同首页
+        // 管理员 -> /dashboard
+        // 普通用户 -> /user/home
         const targetPath = role === 'admin' ? '/dashboard' : '/user/home'
         router.push(targetPath)
         

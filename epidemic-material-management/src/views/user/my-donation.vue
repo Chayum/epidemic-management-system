@@ -24,7 +24,7 @@
           <el-input v-model="searchForm.id" placeholder="请输入捐赠单号" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 120px">
             <el-option label="待审核" value="pending" />
             <el-option label="已通过" value="approved" />
             <el-option label="已驳回" value="rejected" />
@@ -119,39 +119,62 @@ const detailVisible = ref(false)
 const certificateVisible = ref(false)
 const currentRow = ref({})
 
+// 搜索表单状态
 const searchForm = reactive({
   id: '',
   status: ''
 })
 
+// 分页配置
 const pagination = reactive({
   page: 1,
   size: 10,
   total: 0
 })
 
+// 统计卡片数据（目前仅展示总数，其他需后端接口支持）
 const stats = ref([
   { label: '总捐赠次数', value: '0', icon: 'Present', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
   { label: '待审核', value: '0', icon: 'Clock', color: '#faad14', bgColor: '#fffbe6', iconBg: '#ffe7ba' },
   { label: '已通过', value: '0', icon: 'CircleCheck', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' }
 ])
 
+// 表格数据
 const tableData = ref([])
 
+/**
+ * 获取状态对应的标签类型
+ * @param {string} status - 状态码
+ * @returns {string} Element标签类型
+ */
 const getStatusType = (status) => {
   const typeMap = { pending: 'warning', approved: 'success', rejected: 'danger' }
   return typeMap[status] || 'info'
 }
 
+/**
+ * 获取状态显示的文本
+ * @param {string} status - 状态码
+ * @returns {string} 状态文本
+ */
 const getStatusText = (status) => {
   const textMap = { pending: '待审核', approved: '已通过', rejected: '已驳回' }
   return textMap[status] || status
 }
 
+/**
+ * 格式化日期时间
+ * @param {string} date - 日期字符串
+ * @returns {string} 格式化后的日期
+ */
 const formatDate = (date) => {
   return date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
 }
 
+/**
+ * 获取捐赠记录数据
+ * 支持分页和条件筛选
+ */
 const fetchData = async () => {
   loading.value = true
   try {
@@ -162,11 +185,6 @@ const fetchData = async () => {
       id: searchForm.id || undefined
       // 后端/donation/my接口不需要传donorId，后端会自动从token获取
     }
-    // 如果有单号查询，虽然DTO没有直接支持id查询，但可以尝试传给后端看看是否需要支持
-    // 目前后端QueryDTO只有 status, donorUnit, donorId, type
-    // 如果需要支持单号查询，需要修改后端。这里暂时忽略单号查询或仅在前端过滤(不推荐)
-    // 假设后端暂不支持单号精确查询，或者我们可以用 type 字段暂代? 不行。
-    // 暂时忽略 searchForm.id，或者修改后端支持。
     // 考虑到用户需求是“修复假数据”，先确保能查出来。
     
     const res = await getMyDonations(params)
@@ -177,8 +195,7 @@ const fetchData = async () => {
       // 简单更新一下总数统计
       stats.value[0].value = pagination.total.toString()
       // 待审核和已通过无法从分页接口直接获取准确总数，除非后端返回
-      // 暂时保持0或不显示，以免误导。或者仅统计当前页（也不对）。
-      // 这里为了界面不空，可以显示总数，其他两个暂时显示 '-'
+      // 暂时保持0或不显示，以免误导。
       stats.value[1].value = '-'
       stats.value[2].value = '-'
     }
@@ -190,26 +207,43 @@ const fetchData = async () => {
   }
 }
 
+/**
+ * 处理搜索事件
+ * 重置页码并重新加载数据
+ */
 const handleSearch = () => {
   pagination.page = 1
   fetchData()
 }
 
+/**
+ * 重置搜索条件
+ */
 const handleReset = () => {
   Object.assign(searchForm, { id: '', status: '' })
   handleSearch()
 }
 
+/**
+ * 查看详情
+ * @param {Object} row - 当前行数据
+ */
 const handleView = (row) => {
   currentRow.value = row
   detailVisible.value = true
 }
 
+/**
+ * 查看证书
+ * 仅审核通过的捐赠可查看证书
+ * @param {Object} row - 当前行数据
+ */
 const handleCertificate = (row) => {
   currentRow.value = row
   certificateVisible.value = true
 }
 
+// 组件挂载时自动加载数据
 onMounted(() => {
   fetchData()
 })

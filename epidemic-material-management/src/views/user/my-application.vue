@@ -10,7 +10,7 @@
           <el-input v-model="searchForm.id" placeholder="请输入申请单号" clearable />
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 120px">
             <el-option label="待审核" value="pending" />
             <el-option label="已通过" value="approved" />
             <el-option label="已驳回" value="rejected" />
@@ -97,44 +97,66 @@ const loading = ref(false)
 const detailVisible = ref(false)
 const currentRow = ref({})
 
+// 搜索表单状态
 const searchForm = reactive({
   id: '',
   status: ''
 })
 
+// 分页配置
 const pagination = reactive({
   page: 1,
   size: 10,
   total: 0
 })
 
+// 表格数据
 const tableData = ref([])
 
+/**
+ * 获取紧急程度标签类型
+ */
 const getUrgencyType = (urgency) => {
   const typeMap = { critical: 'danger', urgent: 'warning', normal: 'info' }
   return typeMap[urgency] || 'info'
 }
 
+/**
+ * 获取紧急程度显示文本
+ */
 const getUrgencyText = (urgency) => {
   const textMap = { critical: '紧急', urgent: '较急', normal: '普通' }
   return textMap[urgency] || '普通'
 }
 
+/**
+ * 获取状态标签类型
+ */
 const getStatusType = (status) => {
   const typeMap = { pending: 'warning', approved: 'success', rejected: 'danger', cancelled: 'info' }
   return typeMap[status] || 'info'
 }
 
+/**
+ * 获取状态显示文本
+ */
 const getStatusText = (status) => {
   const textMap = { pending: '待审核', approved: '已通过', rejected: '已驳回', cancelled: '已取消' }
   return textMap[status] || '未知状态'
 }
 
+/**
+ * 格式化日期时间
+ */
 const formatTime = (time) => {
   if (!time) return ''
   return dayjs(time).format('YYYY-MM-DD HH:mm:ss')
 }
 
+/**
+ * 获取申请记录列表
+ * 支持分页和条件筛选
+ */
 const fetchData = async () => {
   loading.value = true
   try {
@@ -159,32 +181,48 @@ const fetchData = async () => {
   }
 }
 
+/**
+ * 处理搜索
+ * 重置页码并重新加载数据
+ */
 const handleSearch = () => {
   pagination.page = 1
   fetchData()
 }
 
+/**
+ * 重置搜索条件
+ */
 const handleReset = () => {
   Object.assign(searchForm, { id: '', status: '' })
   handleSearch()
 }
 
-const handlePageChange = (page) => {
-  pagination.page = page
-  fetchData()
-}
-
+// 分页大小改变
 const handleSizeChange = (size) => {
   pagination.size = size
   pagination.page = 1
   fetchData()
 }
 
+// 页码改变
+const handlePageChange = (page) => {
+  pagination.page = page
+  fetchData()
+}
+
+/**
+ * 查看详情
+ */
 const handleView = (row) => {
   currentRow.value = row
   detailVisible.value = true
 }
 
+/**
+ * 物流追踪
+ * 跳转到追踪页面（需后端接口支持）
+ */
 const handleTrack = (row) => {
   if (row.status === 'approved') {
     // 实际项目中应跳转到物流详情页或弹窗显示

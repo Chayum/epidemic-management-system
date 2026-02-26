@@ -207,25 +207,28 @@ import { ElMessage } from 'element-plus'
 import { Plus, InfoFilled, CircleCheck, Phone, Message } from '@element-plus/icons-vue'
 import { submitDonation } from '@/api/donation'
 
+// 表单引用和状态变量
 const donationFormRef = ref(null)
-const currentStep = ref(0)
+const currentStep = ref(0) // 当前步骤：0-填写信息, 1-确认信息, 2-提交成功
 const submitting = ref(false)
 
+// 捐赠表单数据模型
 const donationForm = reactive({
-  name: '',
-  type: '',
-  quantity: 1,
-  unit: '',
-  productionDate: '',
-  expiryDate: '',
-  donorUnit: '',
-  contactPerson: '',
-  contactPhone: '',
-  receiveAddress: '',
-  source: '',
-  remark: ''
+  name: '', // 物资名称
+  type: '', // 物资类型
+  quantity: 1, // 数量
+  unit: '', // 单位
+  productionDate: '', // 生产日期
+  expiryDate: '', // 有效期
+  donorUnit: '', // 捐赠单位
+  contactPerson: '', // 联系人
+  contactPhone: '', // 联系电话
+  receiveAddress: '', // 收货地址
+  source: '', // 来源
+  remark: '' // 备注
 })
 
+// 表单校验规则
 const donationRules = {
   name: [{ required: true, message: '请输入物资名称', trigger: 'blur' }],
   type: [{ required: true, message: '请选择物资类型', trigger: 'change' }],
@@ -240,6 +243,11 @@ const donationRules = {
   receiveAddress: [{ required: true, message: '请输入收货地址', trigger: 'blur' }]
 }
 
+/**
+ * 获取物资类型显示名称
+ * @param {string} type - 物资类型代码
+ * @returns {string} 物资类型名称
+ */
 const getTypeName = (type) => {
   const typeMap = {
     protective: '防护物资',
@@ -251,6 +259,10 @@ const getTypeName = (type) => {
   return typeMap[type] || type
 }
 
+/**
+ * 处理下一步点击事件
+ * 校验第一步表单，通过后进入确认步骤
+ */
 const handleNextStep = async () => {
   if (!donationFormRef.value) return
   await donationFormRef.value.validate((valid) => {
@@ -260,19 +272,23 @@ const handleNextStep = async () => {
   })
 }
 
+/**
+ * 提交捐赠申请
+ * 调用后端接口提交数据
+ */
 const handleSubmit = async () => {
   submitting.value = true
   try {
     const submitData = {
       ...donationForm,
-      materialName: donationForm.name
+      materialName: donationForm.name // 后端字段名为 materialName
     }
     // 移除不必要的字段
     delete submitData.name
     
     const res = await submitDonation(submitData)
     if (res.code === 200) {
-      currentStep.value = 2
+      currentStep.value = 2 // 进入成功页面
       ElMessage.success('捐赠提交成功')
     } else {
       ElMessage.error(res.message || '提交失败')
@@ -285,8 +301,12 @@ const handleSubmit = async () => {
   }
 }
 
+/**
+ * 重置表单，继续捐赠
+ */
 const handleReset = () => {
   donationFormRef.value?.resetFields()
+  // 手动重置所有字段，因为 resetFields 可能无法覆盖所有响应式属性
   Object.assign(donationForm, {
     name: '',
     type: '',
@@ -304,6 +324,7 @@ const handleReset = () => {
   currentStep.value = 0
 }
 
+// 文件上传变化处理（暂未实现实际上传逻辑）
 const handleFileChange = (file, files) => {
   console.log(files)
 }

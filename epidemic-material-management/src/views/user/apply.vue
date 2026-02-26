@@ -141,30 +141,35 @@ import { getMaterialList } from '@/api/material'
 import { submitApplication, getMyApplications } from '@/api/application'
 import dayjs from 'dayjs'
 
+// 表单引用和状态
 const materialFormRef = ref(null)
 const applyFormRef = ref(null)
-const currentStep = ref(0)
+const currentStep = ref(0) // 当前步骤：0-选择物资, 1-填写申请, 2-提交成功
 const submitting = ref(false)
 
+// 第一步：物资选择表单
 const materialForm = reactive({
-  type: '',
-  materialId: ''
+  type: '', // 物资类型
+  materialId: '' // 物资ID
 })
 
+// 物资选择校验规则
 const materialRules = {
   type: [{ required: true, message: '请选择物资类型', trigger: 'change' }],
   materialId: [{ required: true, message: '请选择物资', trigger: 'change' }]
 }
 
+// 第二步：申请信息表单
 const applyForm = reactive({
-  quantity: 1,
-  purpose: '',
-  address: '',
-  receiver: '',
-  receiverPhone: '',
-  urgency: 'normal'
+  quantity: 1, // 申请数量
+  purpose: '', // 用途说明
+  address: '', // 收货地址
+  receiver: '', // 收货人
+  receiverPhone: '', // 收货人电话
+  urgency: 'normal' // 紧急程度
 })
 
+// 申请信息校验规则
 const applyRules = {
   quantity: [{ required: true, message: '请输入申请数量', trigger: 'blur' }],
   purpose: [{ required: true, message: '请输入用途说明', trigger: 'blur' }],
@@ -176,23 +181,35 @@ const applyRules = {
   ]
 }
 
-const materialOptions = ref([])
-const applicationHistory = ref([])
+// 数据源
+const materialOptions = ref([]) // 可选物资列表
+const applicationHistory = ref([]) // 最近申请历史
 
+// 当前选中的物资对象
 const selectedMaterial = computed(() => {
   return materialOptions.value.find(m => m.id === materialForm.materialId)
 })
 
+/**
+ * 获取状态标签类型
+ */
 const getStatusType = (status) => {
   const typeMap = { pending: 'warning', approved: 'success', rejected: 'danger', cancelled: 'info' }
   return typeMap[status] || 'info'
 }
 
+/**
+ * 获取状态显示文本
+ */
 const getStatusText = (status) => {
   const textMap = { pending: '待审核', approved: '已通过', rejected: '已驳回', cancelled: '已取消' }
   return textMap[status] || '未知状态'
 }
 
+/**
+ * 获取物资列表
+ * 用于下拉选择，展示有库存的物资
+ */
 const fetchMaterials = async () => {
   try {
     const res = await getMaterialList({ page: 1, size: 100 })
@@ -211,6 +228,10 @@ const fetchMaterials = async () => {
   }
 }
 
+/**
+ * 获取我的申请历史
+ * 展示最近的几条申请记录
+ */
 const fetchMyApplications = async () => {
   try {
     const res = await getMyApplications({ page: 1, size: 5 })
@@ -228,10 +249,16 @@ const fetchMyApplications = async () => {
   }
 }
 
+/**
+ * 物资类型改变时清空已选物资
+ */
 const handleTypeChange = () => {
   materialForm.materialId = ''
 }
 
+/**
+ * 下一步：校验物资选择
+ */
 const handleNextStep = async () => {
   if (!materialFormRef.value) return
   await materialFormRef.value.validate((valid) => {
@@ -241,6 +268,10 @@ const handleNextStep = async () => {
   })
 }
 
+/**
+ * 提交申请
+ * 校验申请信息并提交
+ */
 const handleSubmit = async () => {
   if (!applyFormRef.value) return
   await applyFormRef.value.validate(async (valid) => {
@@ -255,7 +286,7 @@ const handleSubmit = async () => {
         if (res.code === 200) {
           ElMessage.success('申请提交成功')
           currentStep.value = 2
-          fetchMyApplications()
+          fetchMyApplications() // 刷新历史记录
         } else {
           ElMessage.error(res.message || '提交失败')
         }
@@ -269,6 +300,9 @@ const handleSubmit = async () => {
   })
 }
 
+/**
+ * 重置表单，继续申请
+ */
 const handleReset = () => {
   materialFormRef.value?.resetFields()
   applyFormRef.value?.resetFields()

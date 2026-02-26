@@ -9,6 +9,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 用户管理控制器
+ * 提供用户的增删改查、状态管理等功能接口
+ */
 @RestController
 @RequestMapping("/user")
 public class UserController {
@@ -16,6 +20,17 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    /**
+     * 获取用户列表
+     * @param page 页码，默认为1
+     * @param size 每页大小，默认为10
+     * @param username 用户名（可选，模糊查询）
+     * @param name 姓名（可选，模糊查询）
+     * @param phone 电话（可选，模糊查询）
+     * @param role 角色（可选）
+     * @param status 状态（可选）
+     * @return 分页后的用户列表
+     */
     @GetMapping("/list")
     public Result<PageResult<User>> list(
             @RequestParam(defaultValue = "1") Integer page,
@@ -29,36 +44,67 @@ public class UserController {
         return Result.success(result);
     }
 
+    /**
+     * 根据ID获取用户信息
+     * @param id 用户ID
+     * @return 用户实体对象
+     */
     @GetMapping("/{id}")
     public Result<User> getById(@PathVariable Long id) {
         User user = userService.getUserById(id);
         return Result.success(user);
     }
 
+    /**
+     * 新增用户
+     * @param user 用户实体对象
+     * @return 操作结果消息
+     */
     @PostMapping
     public Result<String> add(@RequestBody User user) {
         userService.addUser(user);
         return Result.success("添加成功");
     }
 
+    /**
+     * 更新用户信息
+     * @param user 用户实体对象（必须包含ID）
+     * @return 操作结果消息
+     */
     @PutMapping
     public Result<String> update(@RequestBody User user) {
         userService.updateUser(user);
         return Result.success("修改成功");
     }
 
+    /**
+     * 删除用户
+     * @param id 用户ID
+     * @return 操作结果消息
+     */
     @DeleteMapping("/{id}")
     public Result<String> delete(@PathVariable Long id) {
         userService.deleteUser(id);
         return Result.success("删除成功");
     }
 
+    /**
+     * 更新用户状态
+     * @param id 用户ID
+     * @param status 新状态
+     * @return 操作结果消息
+     */
     @PutMapping("/status/{id}")
     public Result<String> updateStatus(@PathVariable Long id, @RequestParam String status) {
         userService.updateUserStatus(id, status);
         return Result.success("状态更新成功");
     }
 
+    /**
+     * 批量更新用户状态
+     * @param params 包含ids列表和status字符串的Map
+     * @return 操作结果消息
+     */
     @PutMapping("/batch/status")
     public Result<String> batchUpdateStatus(@RequestBody java.util.Map<String, Object> params) {
         @SuppressWarnings("unchecked")
@@ -68,6 +114,11 @@ public class UserController {
         return Result.success("批量状态更新成功");
     }
 
+    /**
+     * 批量删除用户
+     * @param params 包含ids列表的Map
+     * @return 操作结果消息
+     */
     @DeleteMapping("/batch")
     public Result<String> batchDelete(@RequestBody java.util.Map<String, Object> params) {
         @SuppressWarnings("unchecked")

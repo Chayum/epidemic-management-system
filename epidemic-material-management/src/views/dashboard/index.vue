@@ -1,5 +1,10 @@
+<!--
+  管理端仪表盘组件
+  展示系统整体运行状态，包括统计卡片、趋势图表、库存预警及操作日志
+-->
 <template>
   <div class="dashboard">
+    <!-- 顶部欢迎区域 -->
     <div class="welcome-section">
       <div class="welcome-content">
         <h1 class="welcome-title">欢迎回来，管理员</h1>
@@ -15,6 +20,7 @@
       </div>
     </div>
     
+    <!-- 统计卡片区域 -->
     <el-row :gutter="20" class="stat-row">
       <el-col :xs="24" :sm="12" :lg="6" v-for="stat in stats" :key="stat.label">
         <div class="stat-card" :style="{ borderLeftColor: stat.color }">
@@ -33,6 +39,7 @@
         </el-col>
     </el-row>
     
+    <!-- 图表区域：趋势图与饼图 -->
     <el-row :gutter="20" class="chart-row">
       <el-col :xs="24" :lg="16">
         <div class="card-container">
@@ -57,6 +64,7 @@
       </el-col>
     </el-row>
     
+    <!-- 列表区域：待审核申请与库存预警 -->
     <el-row :gutter="20" class="chart-row">
       <el-col :xs="24" :lg="12">
         <div class="card-container">
@@ -103,6 +111,7 @@
       </el-col>
     </el-row>
     
+    <!-- 日志区域 -->
     <el-row :gutter="20" class="chart-row">
       <el-col :span="24">
         <div class="card-container">
@@ -131,12 +140,18 @@ import { getDashboardStats, getTrendData, getMaterialStats } from '@/api/stats'
 import { getApplicationList } from '@/api/application'
 import { getMaterialList } from '@/api/material'
 
+// 当前日期格式化
 const currentDate = computed(() => dayjs().format('YYYY年MM月DD日'))
+
+// 图表周期筛选（week/month/year）
 const chartPeriod = ref('week')
+
+// 图表 DOM 引用
 const trendChartRef = ref(null)
 const pieChartRef = ref(null)
 const loading = ref(false)
 
+// 统计卡片数据初始化
 const stats = ref([
   { label: '物资总数', value: '0', icon: 'Box', color: '#1890ff', bgColor: '#e6f7ff', trend: 0 },
   { label: '今日入库', value: '0', icon: 'Download', color: '#52c41a', bgColor: '#f6ffed', trend: 0 },
@@ -144,19 +159,25 @@ const stats = ref([
   { label: '待审核', value: '0', icon: 'Clock', color: '#f5222d', bgColor: '#fff1f0', trend: 0 }
 ])
 
+// 列表数据状态
 const pendingApplications = ref([])
 const warningCount = ref(0)
 const warningList = ref([])
 const operationLogs = ref([])
 
-// 从后端获取统计数据
+/**
+ * 获取仪表盘核心统计数据
+ * 并发请求多个接口以提升加载速度
+ */
 const fetchDashboardData = async () => {
   loading.value = true
   try {
+    // 获取基础统计数字
     const res = await getDashboardStats()
     if (res.code === 200) {
       const data = res.data
       stats.value[0].value = data.totalMaterials?.toLocaleString() || '0'
+      // 暂无今日出入库接口，保留为0
       stats.value[1].value = '0' 
       stats.value[2].value = '0'
       stats.value[3].value = data.pendingApplications?.toString() || '0'
@@ -166,6 +187,7 @@ const fetchDashboardData = async () => {
   }
   
   try {
+    // 获取待审核申请列表（取前4条）
     const appRes = await getApplicationList({ page: 1, size: 4, status: 'pending' })
     if (appRes.code === 200) {
       pendingApplications.value = appRes.data.list?.map(item => ({
@@ -181,6 +203,7 @@ const fetchDashboardData = async () => {
   }
   
   try {
+    // 获取库存预警列表（取前3条）
     const matRes = await getMaterialList({ page: 1, size: 3 })
     if (matRes.code === 200) {
       const warnings = matRes.data.list?.filter(item => item.stock < item.threshold) || []
@@ -200,6 +223,10 @@ const fetchDashboardData = async () => {
   loading.value = false
 }
 
+/**
+ * 初始化入库出库趋势折线图
+ * 支持按周期筛选刷新数据
+ */
 const initTrendChart = async () => {
   const chart = echarts.init(trendChartRef.value)
   
@@ -243,14 +270,18 @@ const initTrendChart = async () => {
   }
 }
 
+/**
+ * 初始化物资类型分布饼图
+ */
 const initPieChart = async () => {
   const chart = echarts.init(pieChartRef.value)
   
   try {
     const res = await getMaterialStats()
     if (res.code === 200) {
-      const data = res.data.map(item => ({
-        value: item.value,
+      const typeStats = res.data.typeStats || []
+      const data = typeStats.map(item => ({
+        value: item.stock || item.count || 0,
         name: item.name,
         itemStyle: { 
           color: item.name === '防护物资' ? '#1890ff' : 
@@ -284,11 +315,13 @@ const initPieChart = async () => {
   }
 }
 
+// 页面加载完成后初始化
 onMounted(() => {
   fetchDashboardData()
   initTrendChart()
   initPieChart()
   
+  // 监听窗口大小变化，自适应图表尺寸
   window.addEventListener('resize', () => {
     echarts.getInstanceByDom(trendChartRef.value)?.resize()
     echarts.getInstanceByDom(pieChartRef.value)?.resize()

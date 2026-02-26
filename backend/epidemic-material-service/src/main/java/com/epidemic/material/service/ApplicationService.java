@@ -8,6 +8,7 @@ import com.epidemic.material.dto.ApplicationSubmitDTO;
 import com.epidemic.material.entity.Application;
 import com.epidemic.material.vo.ApplicationVO;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -70,4 +71,11 @@ public interface ApplicationService extends IService<Application> {
      * @return 统计数据
      */
     Map<String, Object> getStats();
+
+    /**
+     * 获取趋势数据
+     * @param startDate 开始日期
+     * @return 趋势数据列表
+     */
+    List<Map<String, Object>> getTrendData(String startDate);
 }

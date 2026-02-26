@@ -28,6 +28,7 @@ import java.util.Map;
 
 /**
  * 捐赠服务实现类
+ * 处理捐赠申请的提交、审核、查询及统计，并负责与物资库存进行联动
  */
 @Slf4j
 @Service
@@ -39,11 +40,19 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
     @Autowired
     private DonationConverter donationConverter;
 
+    /**
+     * 分页查询捐赠列表
+     * 支持多条件组合查询（状态、单位、捐赠人、类型、单号）
+     *
+     * @param queryDTO 查询参数DTO
+     * @return 捐赠记录VO分页对象
+     */
     @Override
     public PageResult<DonationVO> getDonationList(DonationQueryDTO queryDTO) {
         Page<Donation> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getSize());
         LambdaQueryWrapper<Donation> wrapper = new LambdaQueryWrapper<>();
         
+        // 构建查询条件
         if (StringUtils.hasText(queryDTO.getStatus())) {
             wrapper.eq(Donation::getStatus, queryDTO.getStatus());
         }
@@ -60,6 +69,7 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
             wrapper.eq(Donation::getId, queryDTO.getId());
         }
         
+        // 按捐赠时间倒序排列
         wrapper.orderByDesc(Donation::getDonateTime);
         
         Page<Donation> result = baseMapper.selectPage(pageParam, wrapper);
@@ -68,18 +78,23 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
         return PageResult.of(voList, result.getTotal(), queryDTO.getPage(), queryDTO.getSize());
     }
 
+    /**
+     * 提交捐赠申请
+     *
+     * @param submitDTO 提交参数
+     * @param userId 当前登录用户ID（可为空）
+     * @param username 当前登录用户名（可为空）
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void submitDonation(DonationSubmitDTO submitDTO, Long userId, String username) {
         Donation donation = donationConverter.toEntity(submitDTO);
-        donation.setId("D" + System.currentTimeMillis());
-        donation.setStatus("pending");
+        donation.setId("D" + System.currentTimeMillis()); // 生成捐赠单号
+        donation.setStatus("pending"); // 初始状态为待审核
         donation.setDonateTime(LocalDateTime.now());
         
         if (userId != null) {
             donation.setDonorId(userId);
-            // 如果DTO中没有填单位名称，且用户已登录，可以考虑使用用户所属单位
-            // 但这里简单起见，如果DTO填了就用DTO的，否则前端应该必填
         }
         
         // 为 unit 字段设置默认值
@@ -91,6 +106,12 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
         log.info("收到新的捐赠申请: {}", donation.getId());
     }
 
+    /**
+     * 审核捐赠申请
+     * 若审核通过且指定了目标物资，会自动增加库存
+     *
+     * @param approveDTO 审核参数（包含审核状态、目标物资ID、备注）
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void approveDonation(DonationApproveDTO approveDTO) {
@@ -118,24 +139,34 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
             }
         }
         
+        // 更新捐赠单状态
         donation.setStatus(approveDTO.getStatus());
         donation.setRemark(approveDTO.getRemark());
         donation.setApproveTime(LocalDateTime.now());
         baseMapper.updateById(donation);
     }
 
+    /**
+     * 获取捐赠详情
+     *
+     * @param id 捐赠单ID
+     * @return 捐赠详情VO，不存在时返回null
+     */
     @Override
     public DonationVO getDetail(String id) {
         Donation donation = baseMapper.selectById(id);
         if (donation == null) {
-            // 返回null而不是抛出异常，让Controller或前端处理
-            // 或者抛出特定的业务异常
-            // 这里为了避免前端显示“系统异常”，我们返回null，然后在Controller判空
             return null;
         }
         return donationConverter.toVO(donation);
     }
 
+    /**
+     * 获取捐赠统计概览
+     * 包括总捐赠数、已通过物资总量、待审核及已通过数量
+     *
+     * @return 统计Map
+     */
     @Override
     public Map<String, Object> getStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -153,5 +184,16 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
         stats.put("approvedCount", count(approvedWrapper));
         
         return stats;
+    }
+
+    /**
+     * 获取捐赠（入库）趋势数据
+     *
+     * @param startDate 统计开始日期
+     * @return 每日入库统计列表
+     */
+    @Override
+    public List<Map<String, Object>> getTrendData(String startDate) {
+        return baseMapper.countApprovedByDate(startDate);
     }
 }

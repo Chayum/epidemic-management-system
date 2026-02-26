@@ -20,10 +20,22 @@ import java.util.stream.Collectors;
 
 /**
  * 物资服务实现类
+ * 负责物资的增删改查、库存管理、预警分析及统计功能
  */
 @Service
 public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> implements MaterialService {
 
+    /**
+     * 分页查询物资列表
+     * 支持名称模糊查询、类型精确查询以及基于库存阈值的状态筛选
+     *
+     * @param page 页码
+     * @param size 每页大小
+     * @param name 物资名称（模糊）
+     * @param type 物资类型
+     * @param status 库存状态（sufficient:充足, warning:预警, insufficient:不足）
+     * @return 分页结果
+     */
     @Override
     public PageResult<Material> getMaterialList(Integer page, Integer size, String name, String type, String status) {
         Page<Material> pageParam = new Page<>(page, size);
@@ -35,8 +47,21 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         if (StringUtils.hasText(type)) {
             wrapper.eq(Material::getType, type);
         }
+        // 根据状态码动态构建库存阈值查询条件
         if (StringUtils.hasText(status)) {
-            wrapper.eq(Material::getStatus, status);
+            if ("sufficient".equals(status)) {
+                // 库存 >= 阈值
+                wrapper.apply("stock >= threshold");
+            } else if ("warning".equals(status)) {
+                // 阈值 * 0.5 <= 库存 < 阈值
+                wrapper.apply("stock < threshold AND stock >= threshold * 0.5");
+            } else if ("insufficient".equals(status)) {
+                // 库存 < 阈值 * 0.5
+                wrapper.apply("stock < threshold * 0.5");
+            } else {
+                // 其他情况按数据库字段匹配
+                wrapper.eq(Material::getStatus, status);
+            }
         }
         wrapper.orderByDesc(Material::getCreateTime);
         
@@ -44,8 +69,15 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         return PageResult.of(result.getRecords(), result.getTotal(), page, size);
     }
 
+    /**
+     * 新增物资
+     * 自动生成ID、设置创建时间及默认状态
+     *
+     * @param material 物资实体
+     */
     @Override
     public void addMaterial(Material material) {
+        // 生成唯一ID（此处简化使用时间戳，生产环境建议使用雪花算法）
         material.setId("M" + System.currentTimeMillis());
         material.setCreateTime(LocalDateTime.now());
         material.setUpdateTime(LocalDateTime.now());
@@ -55,6 +87,11 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         baseMapper.insert(material);
     }
 
+    /**
+     * 更新物资信息
+     *
+     * @param material 包含更新字段的物资实体
+     */
     @Override
     public void updateMaterial(Material material) {
         if (material.getId() == null) {
@@ -64,6 +101,15 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         baseMapper.updateById(material);
     }
 
+    /**
+     * 获取库存列表（带仓库信息）
+     * 目前仓库和库位信息为Mock数据，实际需关联Warehouse表
+     *
+     * @param page 页码
+     * @param size 每页大小
+     * @param warehouse 仓库筛选
+     * @return 包含库存详情的Map列表
+     */
     @Override
     public PageResult<Map<String, Object>> getInventoryList(Integer page, Integer size, String warehouse) {
         Page<Material> pageParam = new Page<>(page, size);
@@ -73,6 +119,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         }
         Page<Material> result = baseMapper.selectPage(pageParam, wrapper);
         
+        // 组装库存展示数据
         List<Map<String, Object>> list = result.getRecords().stream().map(m -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", "INV" + m.getId());
@@ -89,6 +136,12 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         return PageResult.of(list, result.getTotal(), page, size);
     }
 
+    /**
+     * 获取库存预警物资列表
+     * 查询库存低于阈值的物资，并计算预警等级
+     *
+     * @return 预警物资列表
+     */
     @Override
     public List<Map<String, Object>> getWarningList() {
         LambdaQueryWrapper<Material> wrapper = new LambdaQueryWrapper<>();
@@ -104,38 +157,61 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
             map.put("threshold", m.getThreshold());
             map.put("unit", m.getUnit());
             map.put("type", m.getType());
+            // 库存 < 阈值的一半为高风险(high)，否则为低风险(low)
             map.put("warningLevel", m.getStock() < m.getThreshold() * 0.5 ? "high" : "low");
             return map;
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 库存盘点/校准
+     * 更新物资的实际库存数量
+     *
+     * @param inventoryId 库存记录ID（当前逻辑为 "INV" + MaterialId）
+     * @param actualStock 盘点后的实际库存
+     * @param remark 盘点备注
+     */
     @Override
     public void checkInventory(String inventoryId, Integer actualStock, String remark) {
-        // inventoryId is mapped to INV + MaterialId
+        // 解析物资ID
         String materialId = inventoryId.replace("INV", "");
         Material material = baseMapper.selectById(materialId);
         if (material == null) {
             throw new BusinessException("物资不存在");
         }
+        // 更新库存
         material.setStock(actualStock);
         material.setUpdateTime(LocalDateTime.now());
         baseMapper.updateById(material);
     }
 
+    /**
+     * 获取物资综合统计数据
+     * 包括总库存量和各类型物资的分布情况
+     *
+     * @return 统计结果Map
+     */
     @Override
     public Map<String, Object> getStats() {
         Map<String, Object> stats = new HashMap<>();
-        // Total Stock
+        // 统计总库存
         stats.put("totalStock", baseMapper.sumStock());
         
-        List<Map<String, Object>> typeStats = new ArrayList<>();
-        // 简单按类型统计数量（非库存）
-        // 实际可以做更复杂的聚合
-        Map<String, Object> type1 = new HashMap<>();
-        type1.put("type", "protective");
-        type1.put("name", "防护物资");
-        type1.put("count", 0); // 暂未实现按类型统计库存，可后续完善
-        typeStats.add(type1);
+        // 按类型统计库存分布
+        List<Map<String, Object>> typeStats = baseMapper.countByType();
+        
+        // 映射类型编码为中文名称
+        Map<String, String> typeNameMap = new HashMap<>();
+        typeNameMap.put("protective", "防护物资");
+        typeNameMap.put("disinfection", "消杀物资");
+        typeNameMap.put("testing", "检测物资");
+        typeNameMap.put("equipment", "医疗设备");
+        typeNameMap.put("other", "其他物资");
+        
+        for (Map<String, Object> item : typeStats) {
+            String type = (String) item.get("type");
+            item.put("name", typeNameMap.getOrDefault(type, type));
+        }
         
         stats.put("typeStats", typeStats);
         

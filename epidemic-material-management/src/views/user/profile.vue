@@ -317,7 +317,7 @@ const loadUserInfo = async () => {
     if (res.code === 200) {
       userInfo.value = {
         ...res.data,
-        createTime: userStore.userInfo.createTime || ''
+        createTime: res.data?.createTime || userStore.userInfo.createTime || ''
       }
       infoForm.name = userInfo.value.name || ''
       infoForm.phone = userInfo.value.phone || ''

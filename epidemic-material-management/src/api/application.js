@@ -1,6 +1,14 @@
 import request from '@/utils/request'
 
-// 获取申请列表
+/**
+ * 获取申请列表
+ * @param {Object} params - 查询参数
+ * @param {number} params.page - 页码
+ * @param {number} params.size - 每页大小
+ * @param {string} [params.status] - 申请状态
+ * @param {string} [params.applicantName] - 申请人姓名
+ * @returns {Promise} Axios Promise对象
+ */
 export const getApplicationList = (params) => {
   return request({
     url: '/application/list',
@@ -9,7 +17,11 @@ export const getApplicationList = (params) => {
   })
 }
 
-// 获取申请详情
+/**
+ * 获取申请详情
+ * @param {string} id - 申请ID
+ * @returns {Promise} Axios Promise对象
+ */
 export const getApplicationDetail = (id) => {
   return request({
     url: `/application/${id}`,
@@ -17,7 +29,14 @@ export const getApplicationDetail = (id) => {
   })
 }
 
-// 提交物资申请
+/**
+ * 提交物资申请
+ * @param {Object} data - 申请数据
+ * @param {Array} data.items - 申请物资项列表
+ * @param {string} data.reason - 申请理由
+ * @param {string} data.urgency - 紧急程度
+ * @returns {Promise} Axios Promise对象
+ */
 export const submitApplication = (data) => {
   return request({
     url: '/application',
@@ -26,7 +45,14 @@ export const submitApplication = (data) => {
   })
 }
 
-// 审核申请
+/**
+ * 审核申请
+ * @param {Object} data - 审核数据
+ * @param {string} data.applicationId - 申请ID
+ * @param {boolean} data.approved - 是否通过
+ * @param {string} [data.comment] - 审核意见
+ * @returns {Promise} Axios Promise对象
+ */
 export const approveApplication = (data) => {
   return request({
     url: '/application/approve',
@@ -35,7 +61,11 @@ export const approveApplication = (data) => {
   })
 }
 
-// 取消申请
+/**
+ * 取消申请
+ * @param {string} id - 申请ID
+ * @returns {Promise} Axios Promise对象
+ */
 export const cancelApplication = (id) => {
   return request({
     url: `/application/${id}/cancel`,
@@ -43,7 +73,14 @@ export const cancelApplication = (id) => {
   })
 }
 
-// 获取我的申请
+/**
+ * 获取我的申请列表
+ * @param {Object} params - 查询参数
+ * @param {number} params.page - 页码
+ * @param {number} params.size - 每页大小
+ * @param {string} [params.status] - 申请状态
+ * @returns {Promise} Axios Promise对象
+ */
 export const getMyApplications = (params) => {
   return request({
     url: '/application/my',
@@ -52,7 +89,11 @@ export const getMyApplications = (params) => {
   })
 }
 
-// 获取物流追踪信息
+/**
+ * 获取物流追踪信息
+ * @param {string} id - 申请ID
+ * @returns {Promise} Axios Promise对象
+ */
 export const getTrackInfo = (id) => {
   return request({
     url: `/application/${id}/track`,

@@ -1,22 +1,34 @@
+/**
+ * 用户状态管理 Store
+ * 基于 Pinia 实现，负责管理用户登录状态、Token、个人信息及权限角色
+ */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { login as loginApi, getUserInfo as getUserInfoApi } from '@/api/auth'
 
-// 定义用户状态 store
 export const useUserStore = defineStore('user', () => {
-  // 用户 token
+  // --- State ---
+  
+  // 用户 Token，优先从 localStorage 读取以保持持久化
   const token = ref(localStorage.getItem('token') || '')
   
-  // 用户信息
+  // 用户基本信息对象
   const userInfo = ref(JSON.parse(localStorage.getItem('userInfo') || '{}'))
-  
-  // 是否已登录
+
+  // --- Getters ---
+
+  // 计算属性：判断是否已登录
   const isLoggedIn = computed(() => !!token.value)
   
-  // 用户角色
+  // 计算属性：获取当前用户角色
   const userRole = computed(() => userInfo.value.role || '')
 
-  // 设置 token
+  // --- Actions ---
+
+  /**
+   * 设置 Token 并持久化到 localStorage
+   * @param {string} newToken - 新的 Token 字符串
+   */
   const setToken = (newToken) => {
     token.value = newToken
     if (newToken) {
@@ -26,9 +38,12 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 设置用户信息
+  /**
+   * 设置用户信息并持久化
+   * @param {Object} info - 用户信息对象
+   */
   const setUserInfo = (info) => {
-    userInfo.value = info
+    userInfo.value = info || {}
     if (info && Object.keys(info).length > 0) {
       localStorage.setItem('userInfo', JSON.stringify(info))
     } else {
@@ -36,21 +51,34 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 登录
+  /**
+   * 登录动作
+   * 调用后端登录接口，成功后保存 Token 和用户信息
+   * @param {Object} loginData - 登录表单数据 {username, password, role}
+   * @returns {Promise} 接口响应结果
+   */
   const login = async (loginData) => {
-    // 调用后端登录接口
-    const res = await loginApi(loginData)
-    
-    if (res.code === 200) {
-      setToken(res.data.token)
-      setUserInfo(res.data.userInfo)
-      return res
-    } else {
-      throw new Error(res.message || '登录失败')
+    try {
+      // 调用后端登录接口
+      const res = await loginApi(loginData)
+      
+      if (res.code === 200) {
+        // 登录成功，保存状态
+        setToken(res.data.token)
+        setUserInfo(res.data.userInfo)
+        return res
+      } else {
+        throw new Error(res.message || '登录失败')
+      }
+    } catch (error) {
+      throw error
     }
   }
 
-  // 获取用户信息
+  /**
+   * 异步获取最新用户信息
+   * 用于页面刷新或需要更新用户状态时调用
+   */
   const fetchUserInfo = async () => {
     if (!token.value) return
     
@@ -61,10 +89,14 @@ export const useUserStore = defineStore('user', () => {
       }
     } catch (error) {
       console.error('获取用户信息失败', error)
+      // 若获取用户信息失败（如Token失效），可视情况触发登出
     }
   }
 
-  // 登出
+  /**
+   * 登出动作
+   * 清除 Token 和用户信息，重置状态
+   */
   const logout = () => {
     token.value = ''
     userInfo.value = {}
@@ -72,12 +104,12 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('userInfo')
   }
 
-  // 清除本地存储数据（开发调试用）
+  /**
+   * 辅助方法：清除所有本地存储数据
+   * 通常用于开发调试或强制重置环境
+   */
   const clearLocalStorage = () => {
-    token.value = ''
-    userInfo.value = {}
-    localStorage.removeItem('token')
-    localStorage.removeItem('userInfo')
+    logout()
   }
 
   return {

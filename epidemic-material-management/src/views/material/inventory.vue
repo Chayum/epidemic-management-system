@@ -1,5 +1,10 @@
+<!--
+  库存管理页面组件
+  提供物资的列表查询、新增、编辑、删除、导入导出及统计展示功能
+-->
 <template>
   <div class="material-inventory">
+    <!-- 顶部标题与操作栏 -->
     <div class="page-header">
       <h2 class="page-title">库存管理</h2>
       <div class="header-actions">
@@ -15,6 +20,7 @@
       </div>
     </div>
     
+    <!-- 库存统计卡片 -->
     <el-row :gutter="20" class="stat-row">
       <el-col :xs="12" :sm="6" v-for="stat in inventoryStats" :key="stat.label">
         <div class="stat-card" :style="{ background: stat.bgColor }">
@@ -27,20 +33,21 @@
       </el-col>
     </el-row>
     
+    <!-- 搜索过滤栏 -->
     <div class="search-bar card-container">
       <el-form :inline="true" :model="searchForm">
         <el-form-item label="物资名称">
           <el-input v-model="searchForm.name" placeholder="请输入物资名称" clearable />
         </el-form-item>
         <el-form-item label="物资类型">
-          <el-select v-model="searchForm.type" placeholder="请选择类型" clearable>
+          <el-select v-model="searchForm.type" placeholder="请选择类型" clearable style="width: 120px">
             <el-option label="防护物资" value="protective" />
             <el-option label="消杀物资" value="disinfection" />
             <el-option label="检测物资" value="testing" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
-          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="请选择状态" clearable style="width: 120px">
             <el-option label="库存充足" value="sufficient" />
             <el-option label="库存预警" value="warning" />
             <el-option label="库存不足" value="insufficient" />
@@ -57,6 +64,7 @@
       </el-form>
     </div>
     
+    <!-- 物资列表表格 -->
     <div class="table-container">
       <el-table :data="tableData" v-loading="loading" stripe>
         <el-table-column prop="materialId" label="物资ID" width="120" />
@@ -88,6 +96,7 @@
         </el-table-column>
       </el-table>
       
+      <!-- 分页组件 -->
       <div class="pagination-wrap">
         <el-pagination
           v-model:current-page="pagination.page"
@@ -101,6 +110,7 @@
       </div>
     </div>
     
+    <!-- 详情弹窗 -->
     <el-dialog v-model="dialogVisible" title="物资详情" width="600px">
       <el-descriptions :column="2" border>
         <el-descriptions-item label="物资ID">{{ currentItem.materialId }}</el-descriptions-item>
@@ -115,6 +125,44 @@
         </el-descriptions-item>
       </el-descriptions>
     </el-dialog>
+
+    <!-- 新增/编辑弹窗 -->
+    <el-dialog v-model="editDialogVisible" :title="editMode === 'add' ? '新增物资' : '编辑物资'" width="620px">
+      <el-form ref="editFormRef" :model="editForm" :rules="editRules" label-width="100px">
+        <el-form-item label="物资名称" prop="name">
+          <el-input v-model="editForm.name" placeholder="请输入物资名称" clearable />
+        </el-form-item>
+        <el-form-item label="物资类型" prop="type">
+          <el-select v-model="editForm.type" placeholder="请选择类型" style="width: 200px">
+            <el-option label="防护物资" value="protective" />
+            <el-option label="消杀物资" value="disinfection" />
+            <el-option label="检测物资" value="testing" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="规格型号">
+          <el-input v-model="editForm.specification" placeholder="请输入规格型号" clearable />
+        </el-form-item>
+        <el-form-item label="单位" prop="unit">
+          <el-input v-model="editForm.unit" placeholder="如：个/箱/套" clearable style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="库存数量" prop="stock">
+          <el-input-number v-model="editForm.stock" :min="0" :controls="true" style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="预警阈值" prop="threshold">
+          <el-input-number v-model="editForm.threshold" :min="0" :controls="true" style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="存放仓库">
+          <el-input v-model="editForm.warehouse" placeholder="请输入仓库/库区" clearable />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="editForm.description" type="textarea" :rows="3" placeholder="请输入描述" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -122,24 +170,31 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Upload, Plus, Search, Refresh, Box, Warning, Check, Close } from '@element-plus/icons-vue'
-import { getMaterialList } from '@/api/material'
+import { getMaterialList, addMaterial, updateMaterial, deleteMaterial } from '@/api/material'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
 const currentItem = ref({})
+const editDialogVisible = ref(false)
+const editMode = ref('add') // 'add' 或 'edit'
+const saving = ref(false)
+const editFormRef = ref(null)
 
+// 搜索表单状态
 const searchForm = reactive({
   name: '',
   type: '',
   status: ''
 })
 
+// 分页状态
 const pagination = reactive({
   page: 1,
   size: 10,
   total: 0
 })
 
+// 顶部统计数据（Mock初始值）
 const inventoryStats = ref([
   { label: '物资种类', value: '0', icon: 'Box', color: '#1890ff', bgColor: '#e6f7ff' },
   { label: '总库存', value: '0', icon: 'Collection', color: '#52c41a', bgColor: '#f6ffed' },
@@ -149,7 +204,32 @@ const inventoryStats = ref([
 
 const tableData = ref([])
 
-// 从后端获取物资列表
+// 编辑表单状态
+const editForm = reactive({
+  id: '',
+  name: '',
+  type: '',
+  specification: '',
+  unit: '',
+  stock: 0,
+  threshold: 0,
+  warehouse: '',
+  description: ''
+})
+
+// 表单校验规则
+const editRules = {
+  name: [{ required: true, message: '请输入物资名称', trigger: 'blur' }],
+  type: [{ required: true, message: '请选择物资类型', trigger: 'change' }],
+  unit: [{ required: true, message: '请输入单位', trigger: 'blur' }],
+  stock: [{ required: true, message: '请输入库存数量', trigger: 'change' }],
+  threshold: [{ required: true, message: '请输入预警阈值', trigger: 'change' }]
+}
+
+/**
+ * 获取物资列表
+ * 根据搜索条件和分页参数查询，并更新统计数据
+ */
 const fetchMaterialList = async () => {
   loading.value = true
   try {
@@ -160,19 +240,24 @@ const fetchMaterialList = async () => {
     }
     const res = await getMaterialList(params)
     if (res.code === 200) {
+      // 转换后端数据格式以适配前端显示
       tableData.value = res.data.list?.map(item => ({
         materialId: item.id,
+        id: item.id,
         name: item.name,
         type: item.type,
         quantity: item.stock,
         unit: item.unit,
         threshold: item.threshold,
         status: item.status,
+        specification: item.specification,
+        warehouse: item.warehouse,
+        description: item.description,
         expiryDate: item.expiryDate
       })) || []
       pagination.total = res.data.total || 0
       
-      // 更新统计数据
+      // 前端简易统计（仅针对当前页，实际生产环境建议由后端返回统计数据）
       const warnings = tableData.value.filter(item => item.quantity < item.threshold)
       const insufficient = warnings.filter(item => item.quantity < item.threshold * 0.5)
       inventoryStats.value[0].value = pagination.total.toString()
@@ -188,16 +273,19 @@ const fetchMaterialList = async () => {
   }
 }
 
+// 辅助函数：获取类型中文名称
 const getTypeName = (type) => {
   const typeMap = { protective: '防护物资', disinfection: '消杀物资', testing: '检测物资' }
   return typeMap[type] || type
 }
 
+// 辅助函数：获取类型标签样式
 const getTypeTag = (type) => {
   const tagMap = { protective: '', disinfection: 'success', testing: 'warning' }
   return tagMap[type] || ''
 }
 
+// 辅助函数：根据库存与阈值计算状态文本
 const getStatusText = (row) => {
   if (row.quantity < row.threshold) {
     return row.quantity < row.threshold * 0.5 ? '库存不足' : '库存预警'
@@ -205,6 +293,7 @@ const getStatusText = (row) => {
   return '库存充足'
 }
 
+// 辅助函数：根据库存与阈值计算状态标签颜色
 const getStatusType = (row) => {
   if (row.quantity < row.threshold) {
     return row.quantity < row.threshold * 0.5 ? 'danger' : 'warning'
@@ -222,12 +311,39 @@ const handleReset = () => {
   handleSearch()
 }
 
+// 打开新增弹窗
 const handleAdd = () => {
-  ElMessage.info('新增物资功能')
+  editMode.value = 'add'
+  // 重置表单
+  Object.assign(editForm, {
+    id: '',
+    name: '',
+    type: '',
+    specification: '',
+    unit: '',
+    stock: 0,
+    threshold: 0,
+    warehouse: '',
+    description: ''
+  })
+  editDialogVisible.value = true
 }
 
+// 打开编辑弹窗（回填数据）
 const handleEdit = (row) => {
-  ElMessage.info(`编辑物资: ${row.name}`)
+  editMode.value = 'edit'
+  Object.assign(editForm, {
+    id: row.materialId,
+    name: row.name,
+    type: row.type,
+    specification: row.specification || '',
+    unit: row.unit || '',
+    stock: row.quantity ?? 0,
+    threshold: row.threshold ?? 0,
+    warehouse: row.warehouse || '',
+    description: row.description || ''
+  })
+  editDialogVisible.value = true
 }
 
 const handleView = (row) => {
@@ -235,14 +351,61 @@ const handleView = (row) => {
   dialogVisible.value = true
 }
 
+// 删除操作
 const handleDelete = (row) => {
   ElMessageBox.confirm(`确定要删除物资 "${row.name}" 吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('删除成功')
+  }).then(async () => {
+    try {
+      const res = await deleteMaterial(row.materialId)
+      if (res.code === 200) {
+        ElMessage.success('删除成功')
+        fetchMaterialList()
+      } else {
+        ElMessage.error(res.message || '删除失败')
+      }
+    } catch (e) {
+      console.error(e)
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
+}
+
+// 保存操作（新增或更新）
+const handleSave = async () => {
+  if (!editFormRef.value) return
+  await editFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    saving.value = true
+    try {
+      const payload = {
+        id: editForm.id || undefined,
+        name: editForm.name,
+        type: editForm.type,
+        specification: editForm.specification || undefined,
+        unit: editForm.unit,
+        stock: editForm.stock,
+        threshold: editForm.threshold,
+        warehouse: editForm.warehouse || undefined,
+        description: editForm.description || undefined
+      }
+      const res = editMode.value === 'add' ? await addMaterial(payload) : await updateMaterial(payload)
+      if (res.code === 200) {
+        ElMessage.success(editMode.value === 'add' ? '新增成功' : '更新成功')
+        editDialogVisible.value = false
+        fetchMaterialList()
+      } else {
+        ElMessage.error(res.message || (editMode.value === 'add' ? '新增失败' : '更新失败'))
+      }
+    } catch (e) {
+      console.error(e)
+      ElMessage.error(editMode.value === 'add' ? '新增失败' : '更新失败')
+    } finally {
+      saving.value = false
+    }
+  })
 }
 
 const handleExport = () => {

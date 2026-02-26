@@ -25,7 +25,7 @@ const routes = [
         path: 'home',
         name: 'UserHome',
         component: () => import('@/views/user/home.vue'),
-        meta: { title: '首页', requiresAuth: true }
+        meta: { title: '首页', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user'] }
       },
       {
         path: 'donation',
@@ -55,7 +55,7 @@ const routes = [
         path: 'profile',
         name: 'UserProfile',
         component: () => import('@/views/user/profile.vue'),
-        meta: { title: '个人中心', requiresAuth: true }
+        meta: { title: '个人中心', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user'] }
       }
     ]
   },
