@@ -6,8 +6,9 @@ import com.epidemic.material.entity.Application;
 import com.epidemic.material.entity.Donation;
 import com.epidemic.material.service.ApplicationService;
 import com.epidemic.material.service.DonationService;
+import com.epidemic.material.service.InventoryLogService;
 import com.epidemic.material.service.MaterialService;
-import com.epidemic.material.util.JwtUtil;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,9 +40,9 @@ public class StatsController {
 
     @Autowired
     private DonationService donationService;
-    
+
     @Autowired
-    private JwtUtil jwtUtil;
+    private InventoryLogService inventoryLogService;
 
     /**
      * 获取管理端仪表盘综合统计数据
@@ -68,6 +69,11 @@ public class StatsController {
         
         // 统计库存预警物资数
         data.put("lowStockItems", materialService.getWarningList().size());
+
+        // 统计今日出入库
+        Map<String, Integer> logStats = inventoryLogService.getTodayStats();
+        data.put("todayInbound", logStats.get("todayInbound"));
+        data.put("todayOutbound", logStats.get("todayOutbound"));
         
         return Result.success("获取成功", data);
     }
@@ -76,16 +82,16 @@ public class StatsController {
      * 获取用户端个人中心统计数据
      * 包括我的申领总数、我的待审核申领数、我的捐赠总数
      *
-     * @param token 用户认证Token
+     * @param userIdStr 用户ID (从网关透传Header获取)
      * @return 个人统计数据Map
      */
     @Operation(summary = "获取用户个人统计数据")
     @GetMapping("/user")
-    public Result<Map<String, Object>> getUserStats(@RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.getUserIdFromToken(token);
-        if (userId == null) {
+    public Result<Map<String, Object>> getUserStats(@RequestHeader("X-User-Id") String userIdStr) {
+        if (userIdStr == null) {
             return Result.error(401, "无效的Token或用户未登录");
         }
+        Long userId = Long.valueOf(userIdStr);
         
         Map<String, Object> data = new HashMap<>();
         

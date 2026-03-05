@@ -19,30 +19,44 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
-        - id: epidemic-user-service-api
+        - id: auth-login
           uri: http://localhost:8081
           predicates:
-            - Path=/api/user/**,/api/auth/**
+            - Path=/api/auth/login
           filters:
             - StripPrefix=1
-        - id: epidemic-user-service-auth
+            - LoginToken
+        - id: user-service
           uri: http://localhost:8081
           predicates:
-            - Path=/auth/**
+            - Path=/api/user/**, /api/auth/**
           filters:
-            - StripPrefix=0
-        - id: epidemic-material-service
+            - StripPrefix=1
+        - id: material-service
           uri: http://localhost:8082
           predicates:
-            - Path=/api/material/**,/api/application/**,/api/donation/**,/api/stats/**
+            - Path=/api/material/**, /api/inventory/**, /api/donation/**, /api/application/**, /api/stats/**
           filters:
             - StripPrefix=1
-        - id: epidemic-pandemic-service
+        - id: pandemic-service
           uri: http://localhost:8083
           predicates:
             - Path=/api/pandemic/**
           filters:
             - StripPrefix=1
+
+jwt:
+  secret: epidemic-material-management-secret-key-2024-super-secret
+  expiration: 604800000
+
+auth:
+  whitelist:
+    - /api/auth/login
+    - /api/auth/register
+    - /doc.html
+    - /swagger-ui.html
+    - /webjars/**
+    - /v3/api-docs/**
 #      globalcors:
 #        cors-configurations:
 #          '[/**]':

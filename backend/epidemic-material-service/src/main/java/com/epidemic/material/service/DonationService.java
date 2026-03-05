@@ -34,8 +34,10 @@ public interface DonationService extends IService<Donation> {
     /**
      * 审核捐赠
      * @param approveDTO 审批参数
+     * @param userId 操作人ID
+     * @param username 操作人姓名
      */
-    void approveDonation(DonationApproveDTO approveDTO);
+    void approveDonation(DonationApproveDTO approveDTO, Long userId, String username);
 
     /**
      * 获取捐赠详情

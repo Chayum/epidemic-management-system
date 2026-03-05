@@ -25,6 +25,8 @@ public class ApplicationConverter {
         }
         Application entity = new Application();
         BeanUtils.copyProperties(dto, entity);
+        // department 字段映射
+//        entity.setDepartment(dto.getApplicantUnit());
         return entity;
     }
 
@@ -37,6 +39,8 @@ public class ApplicationConverter {
         }
         ApplicationVO vo = new ApplicationVO();
         BeanUtils.copyProperties(entity, vo);
+        // applicantUnit 字段映射
+        vo.setApplicantUnit(entity.getDepartment());
         return vo;
     }
 

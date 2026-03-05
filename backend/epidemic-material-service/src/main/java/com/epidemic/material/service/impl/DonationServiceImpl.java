@@ -25,6 +25,10 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.epidemic.material.dto.StockOrderDTO;
+import com.epidemic.material.service.StockService;
+import java.math.BigDecimal;
+import java.util.Collections;
 
 /**
  * 捐赠服务实现类
@@ -39,6 +43,9 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
 
     @Autowired
     private DonationConverter donationConverter;
+
+    @Autowired
+    private StockService stockService;
 
     /**
      * 分页查询捐赠列表
@@ -108,13 +115,15 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
 
     /**
      * 审核捐赠申请
-     * 若审核通过且指定了目标物资，会自动增加库存
+     * 若审核通过且指定了目标物资，会自动创建入库单并增加库存
      *
      * @param approveDTO 审核参数（包含审核状态、目标物资ID、备注）
+     * @param userId 操作人ID
+     * @param username 操作人姓名
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void approveDonation(DonationApproveDTO approveDTO) {
+    public void approveDonation(DonationApproveDTO approveDTO, Long userId, String username) {
         Donation donation = baseMapper.selectById(approveDTO.getDonationId());
         if (donation == null) {
             throw new BusinessException("捐赠记录不存在");
@@ -124,16 +133,34 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
         }
         
         if ("approved".equals(approveDTO.getStatus())) {
-            // 如果指定了入库物资ID，则增加库存
+            // 如果指定了入库物资ID，则创建入库单
             if (StringUtils.hasText(approveDTO.getTargetMaterialId())) {
                 Material material = materialMapper.selectById(approveDTO.getTargetMaterialId());
                 if (material == null) {
                     throw new BusinessException("目标物资不存在，无法入库");
                 }
-                // 增加库存
-                material.setStock(material.getStock() + donation.getQuantity());
-                materialMapper.updateById(material);
-                log.info("捐赠[{}]审核通过，物资[{}]库存增加: {}", donation.getId(), material.getName(), donation.getQuantity());
+                
+                // 创建入库单
+                StockOrderDTO orderDTO = new StockOrderDTO();
+                orderDTO.setType("inbound");
+                orderDTO.setSourceType("donation");
+                orderDTO.setSourceId(donation.getId());
+                orderDTO.setSupplier(donation.getDonorUnit());
+                orderDTO.setRemark("捐赠入库: " + donation.getRemark());
+                
+                StockOrderDTO.StockOrderItemDTO itemDTO = new StockOrderDTO.StockOrderItemDTO();
+                itemDTO.setMaterialId(material.getId());
+                itemDTO.setQuantity(donation.getQuantity());
+                itemDTO.setPrice(BigDecimal.ZERO); // 捐赠通常无价格，或者设为0
+                itemDTO.setRemark(donation.getRemark());
+                
+                orderDTO.setItems(Collections.singletonList(itemDTO));
+                
+                String orderId = stockService.createOrder(orderDTO, userId, username);
+                // 自动审核入库单
+                stockService.auditOrder(orderId, userId, username, true, "自动审核捐赠入库");
+                
+                log.info("捐赠[{}]审核通过，已生成入库单[{}]", donation.getId(), orderId);
             } else {
                 log.info("捐赠[{}]审核通过，但未指定入库物资，仅记录", donation.getId());
             }

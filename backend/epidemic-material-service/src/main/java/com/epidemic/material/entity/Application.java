@@ -31,6 +31,17 @@ public class Application implements Serializable {
 
     private String applicantName;
 
+    /**
+     * 申请人单位
+     */
+    @TableField(value = "applicant_unit")
+    private String department;
+
+    /**
+     * 审核人姓名
+     */
+    private String approverName;
+
     private String purpose;
 
     private String urgency;

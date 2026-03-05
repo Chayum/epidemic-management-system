@@ -26,6 +26,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.epidemic.material.dto.StockOrderDTO;
+import com.epidemic.material.service.StockService;
+import java.math.BigDecimal;
+import java.util.Collections;
 
 /**
  * 申请服务实现类
@@ -40,6 +44,9 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
 
     @Autowired
     private ApplicationConverter applicationConverter;
+
+    @Autowired
+    private StockService stockService;
 
     /**
      * 分页查询申请列表
@@ -109,14 +116,15 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
 
     /**
      * 审核物资申请
-     * 若审核通过，将扣减相应物资库存
+     * 若审核通过，将自动创建出库单并扣减相应物资库存
      *
      * @param approveDTO 审核参数（包含申请ID、审核状态、备注）
      * @param approverId 审核人ID
+     * @param approverName 审核人姓名
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void approveApplication(ApplicationApproveDTO approveDTO, Long approverId) {
+    public void approveApplication(ApplicationApproveDTO approveDTO, Long approverId, String approverName) {
         Application application = baseMapper.selectById(approveDTO.getApplicationId());
         if (application == null) {
             throw new BusinessException("申请单不存在");
@@ -126,7 +134,7 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
         }
         
         if ("approved".equals(approveDTO.getStatus())) {
-            // 审核通过逻辑：扣减库存
+            // 审核通过逻辑：校验并创建出库单
             Material material = materialMapper.selectById(application.getMaterialId());
             if (material == null) {
                 throw new BusinessException("物资不存在");
@@ -134,9 +142,28 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
             if (material.getStock() < application.getQuantity()) {
                 throw new BusinessException("库存不足，无法审批通过");
             }
-            // 更新库存
-            material.setStock(material.getStock() - application.getQuantity());
-            materialMapper.updateById(material);
+            
+            // 创建出库单
+            StockOrderDTO orderDTO = new StockOrderDTO();
+            orderDTO.setType("outbound");
+            orderDTO.setSourceType("application");
+            orderDTO.setSourceId(application.getId());
+            orderDTO.setDepartment(application.getDepartment()); // 领用部门/单位
+            orderDTO.setRemark("申领出库: " + application.getPurpose());
+            
+            StockOrderDTO.StockOrderItemDTO itemDTO = new StockOrderDTO.StockOrderItemDTO();
+            itemDTO.setMaterialId(material.getId());
+            itemDTO.setQuantity(application.getQuantity());
+            itemDTO.setPrice(BigDecimal.ZERO); // 出库价格通常需计算成本，这里暂设0或由StockService计算
+            itemDTO.setRemark(application.getPurpose());
+            
+            orderDTO.setItems(Collections.singletonList(itemDTO));
+            
+            String orderId = stockService.createOrder(orderDTO, approverId, approverName);
+            // 自动审核出库单
+            stockService.auditOrder(orderId, approverId, approverName, true, "自动审核申领出库");
+            
+            log.info("申请[{}]审核通过，已生成出库单[{}]", application.getId(), orderId);
         }
         
         // 更新申请单状态及审核信息
@@ -144,6 +171,7 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
         application.setApproveRemark(approveDTO.getRemark());
         application.setApproveTime(LocalDateTime.now());
         application.setApproverId(approverId);
+        application.setApproverName(approverName);
         baseMapper.updateById(application);
         log.info("管理员[{}]审批了物资申请: {}, 结果: {}", approverId, application.getId(), approveDTO.getStatus());
     }

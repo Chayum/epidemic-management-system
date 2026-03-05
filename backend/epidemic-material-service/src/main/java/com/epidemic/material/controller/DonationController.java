@@ -6,7 +6,6 @@ import com.epidemic.material.dto.DonationApproveDTO;
 import com.epidemic.material.dto.DonationQueryDTO;
 import com.epidemic.material.dto.DonationSubmitDTO;
 import com.epidemic.material.service.DonationService;
-import com.epidemic.material.util.JwtUtil;
 import com.epidemic.material.vo.DonationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,9 +26,7 @@ public class DonationController {
 
     @Autowired
     private DonationService donationService;
-    
-    @Autowired
-    private JwtUtil jwtUtil;
+
 
     /**
      * 获取捐赠列表
@@ -81,17 +78,22 @@ public class DonationController {
     /**
      * 提交捐赠申请
      * @param submitDTO 捐赠提交数据传输对象
-     * @param token 用户Token（可选，匿名捐赠时为空）
+     * @param userIdStr 用户ID (从网关透传Header获取)
+     * @param username 用户名 (从网关透传Header获取)
      * @return 提交结果消息
      */
     @Operation(summary = "提交捐赠申请")
     @PostMapping
-    public Result<String> submit(@Validated @RequestBody DonationSubmitDTO submitDTO, @RequestHeader(value = "Authorization", required = false) String token) {
+    public Result<String> submit(@Validated @RequestBody DonationSubmitDTO submitDTO, 
+                                 @RequestHeader(value = "X-User-Id", required = false) String userIdStr,
+                                 @RequestHeader(value = "X-User-Name", required = false) String username) {
         Long userId = null;
-        String username = null;
-        if (token != null) {
-            userId = jwtUtil.getUserIdFromToken(token);
-            username = jwtUtil.getUsernameFromToken(token);
+        if (userIdStr != null) {
+            try {
+                userId = Long.valueOf(userIdStr);
+            } catch (NumberFormatException e) {
+                // ignore
+            }
         }
         donationService.submitDonation(submitDTO, userId, username);
         return Result.success("提交成功");
@@ -103,7 +105,7 @@ public class DonationController {
      * @param size 每页大小
      * @param status 状态（可选）
      * @param id 捐赠ID（可选）
-     * @param token 用户Token
+     * @param userIdStr 用户ID (从网关透传Header获取)
      * @return 当前用户的捐赠列表
      */
     @Operation(summary = "获取我的捐赠")
@@ -113,11 +115,13 @@ public class DonationController {
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String id,
-            @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.getUserIdFromToken(token);
-        if (userId == null) {
-            return Result.error(401, "无效的Token或用户未登录");
+            @RequestHeader("X-User-Id") String userIdStr) {
+        
+        if (userIdStr == null) {
+             return Result.error(401, "用户未登录");
         }
+        Long userId = Long.valueOf(userIdStr);
+        
         DonationQueryDTO queryDTO = new DonationQueryDTO();
         queryDTO.setPage(page);
         queryDTO.setSize(size);
@@ -130,15 +134,31 @@ public class DonationController {
     /**
      * 审核捐赠
      * @param approveDTO 审核信息数据传输对象
-     * @param token 用户Token，用于验证权限（实际业务中应校验管理员角色）
+     * @param userIdStr 用户ID (从网关透传Header获取)
+     * @param username 用户名 (从网关透传Header获取)
      * @return 审核结果消息
      */
     @Operation(summary = "审核捐赠")
     @PostMapping("/approve")
-    public Result<String> approve(@Validated @RequestBody DonationApproveDTO approveDTO, @RequestHeader("Authorization") String token) {
-        // 校验管理员权限（此处暂略，依赖网关或拦截器，或者在Service中校验用户角色）
-        // 实际上后端应该校验操作人是否为管理员，但这里先假设已鉴权
-        donationService.approveDonation(approveDTO);
+    public Result<String> approve(@Validated @RequestBody DonationApproveDTO approveDTO,
+                                  @RequestHeader(value = "X-User-Id", required = false) String userIdStr,
+                                  @RequestHeader(value = "X-User-Name", required = false) String username) {
+        Long userId = null;
+        if (userIdStr != null) {
+            try {
+                userId = Long.valueOf(userIdStr);
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+        }
+        // 如果无法获取用户名，使用默认值或ID拼接
+        if (username == null && userId != null) {
+            username = "User_" + userId;
+        } else if (username == null) {
+            username = "System";
+        }
+        
+        donationService.approveDonation(approveDTO, userId, username);
         return Result.success("审核完成");
     }
 

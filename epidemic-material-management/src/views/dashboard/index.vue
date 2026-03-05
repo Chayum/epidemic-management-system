@@ -177,9 +177,8 @@ const fetchDashboardData = async () => {
     if (res.code === 200) {
       const data = res.data
       stats.value[0].value = data.totalMaterials?.toLocaleString() || '0'
-      // 暂无今日出入库接口，保留为0
-      stats.value[1].value = '0' 
-      stats.value[2].value = '0'
+      stats.value[1].value = data.todayInbound?.toLocaleString() || '0'
+      stats.value[2].value = data.todayOutbound?.toLocaleString() || '0'
       stats.value[3].value = data.pendingApplications?.toString() || '0'
     }
   } catch (error) {

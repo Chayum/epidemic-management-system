@@ -60,4 +60,7 @@ public class ApplicationVO implements Serializable {
 
     @Schema(description = "审批备注")
     private String approveRemark;
+
+    @Schema(description = "申请单位")
+    private String applicantUnit;
 }

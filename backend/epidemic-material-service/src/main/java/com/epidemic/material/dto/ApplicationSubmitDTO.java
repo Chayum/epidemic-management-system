@@ -43,4 +43,8 @@ public class ApplicationSubmitDTO implements Serializable {
     @Schema(description = "联系电话")
     @NotBlank(message = "联系电话不能为空")
     private String receiverPhone;
+
+//    @Schema(description = "申请单位")
+//    @NotBlank(message = "申请单位不能为空")
+//    private String applicantUnit;
 }

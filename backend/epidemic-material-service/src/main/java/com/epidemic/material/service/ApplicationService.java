@@ -35,8 +35,9 @@ public interface ApplicationService extends IService<Application> {
      * 审核申请
      * @param approveDTO 审批参数
      * @param approverId 审批人ID
+     * @param approverName 审批人姓名
      */
-    void approveApplication(ApplicationApproveDTO approveDTO, Long approverId);
+    void approveApplication(ApplicationApproveDTO approveDTO, Long approverId, String approverName);
 
     /**
      * 取消申请

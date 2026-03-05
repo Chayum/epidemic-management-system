@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * 登录响应DTO
  */
@@ -27,5 +29,6 @@ public class LoginResponse {
         private String phone;
         private String unit;
         private String avatar;
+        private LocalDateTime createTime;
     }
 }
