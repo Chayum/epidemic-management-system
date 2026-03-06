@@ -58,4 +58,10 @@ public interface DonationService extends IService<Donation> {
      * @return 趋势数据列表
      */
     List<Map<String, Object>> getTrendData(String startDate);
+    
+    /**
+     * 获取累计捐赠总额
+     * @return 捐赠总额
+     */
+    Double getTotalAmount();
 }

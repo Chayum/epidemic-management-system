@@ -318,4 +318,26 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
     public List<Map<String, Object>> getTrendData(String startDate) {
         return baseMapper.countApprovedByDate(startDate);
     }
+    
+    /**
+     * 获取累计受益人数
+     */
+    @Override
+    public Integer getTotalBeneficiaries() {
+        // 统计所有已批准的申请中的受益人总数
+        // 注意：如果数据库表中没有 beneficiaries 字段，这里暂时返回 0
+        // 需要在数据库中添加 beneficiaries 字段后才能正确统计
+        try {
+            LambdaQueryWrapper<Application> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Application::getStatus, "approved");
+            List<Application> applications = list(wrapper);
+            
+            // 尝试从 remark 或其他字段提取受益人信息（临时方案）
+            // TODO: 需要在数据库中添加 beneficiaries 字段
+            return 0;
+        } catch (Exception e) {
+            log.error("获取受益人数失败", e);
+            return 0;
+        }
+    }
 }

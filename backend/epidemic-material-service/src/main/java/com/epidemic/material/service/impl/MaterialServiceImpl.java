@@ -217,4 +217,13 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         
         return stats;
     }
+    
+    /**
+     * 获取可用库存总量
+     */
+    @Override
+    public Long getTotalStock() {
+        Integer stock = baseMapper.sumStock();
+        return stock != null ? stock.longValue() : 0L;
+    }
 }

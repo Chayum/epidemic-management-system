@@ -79,4 +79,10 @@ public interface ApplicationService extends IService<Application> {
      * @return 趋势数据列表
      */
     List<Map<String, Object>> getTrendData(String startDate);
+    
+    /**
+     * 获取累计受益人数
+     * @return 受益人数
+     */
+    Integer getTotalBeneficiaries();
 }

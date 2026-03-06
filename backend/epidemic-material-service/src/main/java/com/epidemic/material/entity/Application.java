@@ -61,4 +61,34 @@ public class Application implements Serializable {
     private Long approverId;
 
     private String approveRemark;
+    
+    /**
+     * 受益人数
+     */
+    @TableField(exist = false)
+    private Integer beneficiaries;
+    
+    /**
+     * 申领原因
+     */
+    @TableField(exist = false)
+    private String reason;
+    
+    /**
+     * 捐赠人 ID
+     */
+    @TableField(exist = false)
+    private Long donorId;
+    
+    /**
+     * 捐赠人姓名
+     */
+    @TableField(exist = false)
+    private String donorName;
+    
+    /**
+     * 备注
+     */
+    @TableField(exist = false)
+    private String remark;
 }

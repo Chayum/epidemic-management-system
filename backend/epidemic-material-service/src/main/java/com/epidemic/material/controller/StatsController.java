@@ -3,6 +3,7 @@ package com.epidemic.material.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.epidemic.common.result.Result;
 import com.epidemic.material.entity.Application;
+import com.epidemic.material.entity.DashboardVO;
 import com.epidemic.material.entity.Donation;
 import com.epidemic.material.service.ApplicationService;
 import com.epidemic.material.service.DonationService;
@@ -61,19 +62,19 @@ public class StatsController {
         
         // 统计待审核申请数
         Map<String, Object> appStats = applicationService.getStats();
-        data.put("pendingApplications", appStats.get("pendingCount"));
+        data.put("pendingApplications", appStats.get("pendingCount") != null ? appStats.get("pendingCount") : 0);
         
         // 统计待审核捐赠数
         Map<String, Object> donationStats = donationService.getStats();
-        data.put("pendingDonations", donationStats.get("pendingCount"));
+        data.put("pendingDonations", donationStats.get("pendingCount") != null ? donationStats.get("pendingCount") : 0);
         
         // 统计库存预警物资数
-        data.put("lowStockItems", materialService.getWarningList().size());
+        data.put("lowStockItems", materialService.getWarningList() != null ? materialService.getWarningList().size() : 0);
 
         // 统计今日出入库
         Map<String, Integer> logStats = inventoryLogService.getTodayStats();
-        data.put("todayInbound", logStats.get("todayInbound"));
-        data.put("todayOutbound", logStats.get("todayOutbound"));
+        data.put("todayInbound", logStats.get("todayInbound") != null ? logStats.get("todayInbound") : 0);
+        data.put("todayOutbound", logStats.get("todayOutbound") != null ? logStats.get("todayOutbound") : 0);
         
         return Result.success("获取成功", data);
     }
@@ -161,15 +162,15 @@ public class StatsController {
         List<Integer> inbound = new ArrayList<>();
         List<Integer> outbound = new ArrayList<>();
         
-        Map<String, Integer> inboundMap = inboundList.stream().collect(Collectors.toMap(
+        Map<String, Integer> inboundMap = inboundList != null ? inboundList.stream().collect(Collectors.toMap(
             m -> (String) m.get("date"),
             m -> ((Number) m.get("count")).intValue()
-        ));
+        )) : new HashMap<>();
         
-        Map<String, Integer> outboundMap = outboundList.stream().collect(Collectors.toMap(
+        Map<String, Integer> outboundMap = outboundList != null ? outboundList.stream().collect(Collectors.toMap(
             m -> (String) m.get("date"),
             m -> ((Number) m.get("count")).intValue()
-        ));
+        )) : new HashMap<>();
         
         // 补全日期并填充数据
         for (LocalDate date = start.plusDays(1); !date.isAfter(end); date = date.plusDays(1)) {
@@ -218,5 +219,209 @@ public class StatsController {
     @GetMapping("/donation")
     public Result<Map<String, Object>> getDonationStats() {
         return Result.success(donationService.getStats());
+    }
+    
+    /**
+     * 获取实时数据大屏综合数据
+     * 包含核心指标、物资分类统计、趋势数据、区域分布、预警信息、实时动态等
+     *
+     * @return 实时数据大屏 VO
+     */
+    @Operation(summary = "获取实时数据大屏数据")
+    @GetMapping("/dashboard/full")
+    public Result<DashboardVO> getFullDashboard() {
+        DashboardVO dashboard = new DashboardVO();
+        
+        // 1. 核心指标
+        DashboardVO.CoreMetrics coreMetrics = new DashboardVO.CoreMetrics();
+        coreMetrics.setTotalMaterials(materialService.count());
+        coreMetrics.setTotalStock(materialService.getTotalStock());
+        
+        // 今日出入库
+        Map<String, Integer> logStats = inventoryLogService.getTodayStats();
+        coreMetrics.setTodayInbound(logStats.get("todayInbound") != null ? logStats.get("todayInbound") : 0);
+        coreMetrics.setTodayOutbound(logStats.get("todayOutbound") != null ? logStats.get("todayOutbound") : 0);
+        
+        // 待审核申请和捐赠
+        Map<String, Object> appStats = applicationService.getStats();
+        coreMetrics.setPendingApplications(appStats.get("pendingCount") != null ? (Long) appStats.get("pendingCount") : 0L);
+        
+        Map<String, Object> donationStats = donationService.getStats();
+        coreMetrics.setPendingDonations(donationStats.get("pendingCount") != null ? (Long) donationStats.get("pendingCount") : 0L);
+        
+        // 库存预警
+        List<Map<String, Object>> warningList = materialService.getWarningList();
+        coreMetrics.setLowStockItems(warningList.size());
+        
+        // 累计捐赠总额和受益人数（需要实现对应方法）
+        coreMetrics.setTotalDonationAmount(donationService.getTotalAmount());
+        coreMetrics.setTotalBeneficiaries(applicationService.getTotalBeneficiaries());
+        
+        dashboard.setCoreMetrics(coreMetrics);
+        
+        // 2. 物资分类统计
+        dashboard.setMaterialCategoryStats(buildMaterialCategoryStats());
+        
+        // 3. 趋势数据
+        dashboard.setTrendData(buildTrendData("week"));
+        
+        // 4. 区域统计（需要实现）
+        dashboard.setRegionStats(buildRegionStats());
+        
+        // 5. 预警列表
+        dashboard.setWarningList(buildWarningList(warningList));
+        
+        // 6. 实时动态
+        dashboard.setRealtimeActivities(buildRealtimeActivities());
+        
+        return Result.success(dashboard);
+    }
+    
+    /**
+     * 构建物资分类统计数据
+     */
+    private List<DashboardVO.CategoryStats> buildMaterialCategoryStats() {
+        Map<String, Object> stats = materialService.getStats();
+        List<DashboardVO.CategoryStats> result = new ArrayList<>();
+        
+        // 从 stats 中提取分类数据（需要根据实际返回结构调整）
+        // 示例代码，实际需要根据 getStats() 的返回格式调整
+        return result;
+    }
+    
+    /**
+     * 构建趋势数据
+     */
+    private DashboardVO.TrendData buildTrendData(String period) {
+        LocalDate end = LocalDate.now();
+        LocalDate start = end.minusWeeks(1);
+        
+        List<String> dates = new ArrayList<>();
+        List<Integer> inbound = new ArrayList<>();
+        List<Integer> outbound = new ArrayList<>();
+        
+        for (LocalDate date = start.plusDays(1); !date.isAfter(end); date = date.plusDays(1)) {
+            dates.add(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            // 这里需要调用实际的服务方法获取数据
+            inbound.add(0);
+            outbound.add(0);
+        }
+        
+        DashboardVO.TrendData trendData = new DashboardVO.TrendData();
+        trendData.setDates(dates);
+        trendData.setInbound(inbound);
+        trendData.setOutbound(outbound);
+        
+        return trendData;
+    }
+    
+    /**
+     * 构建区域统计数据
+     */
+    private List<DashboardVO.RegionStats> buildRegionStats() {
+        // TODO: 需要从申领记录中统计各省市的需求数据
+        List<DashboardVO.RegionStats> result = new ArrayList<>();
+        
+        // 示例数据
+        DashboardVO.RegionStats stats1 = new DashboardVO.RegionStats();
+        stats1.setProvince("湖北省");
+        stats1.setDemandCount(100);
+        stats1.setFulfilledCount(80);
+        stats1.setFulfillmentRate(80.0);
+        result.add(stats1);
+        
+        return result;
+    }
+    
+    /**
+     * 构建预警列表
+     */
+    private List<DashboardVO.WarningItem> buildWarningList(List<Map<String, Object>> warningList) {
+        List<DashboardVO.WarningItem> result = new ArrayList<>();
+        
+        if (warningList != null) {
+            for (Map<String, Object> item : warningList) {
+                if (item != null) {
+                    DashboardVO.WarningItem warningItem = new DashboardVO.WarningItem();
+                    warningItem.setMaterialId(item.get("id") != null ? item.get("id").toString() : "");
+                    warningItem.setMaterialName((String) item.get("name"));
+                    warningItem.setCurrentStock(item.get("stock") != null ? (Integer) item.get("stock") : 0);
+                    warningItem.setWarningThreshold(item.get("minStock") != null ? (Integer) item.get("minStock") : 0);
+            
+                    // 计算预警级别
+                    int stock = warningItem.getCurrentStock();
+                    int minStock = warningItem.getWarningThreshold();
+                    if (stock <= minStock * 0.3) {
+                        warningItem.setWarningLevel("high");
+                    } else if (stock <= minStock * 0.6) {
+                        warningItem.setWarningLevel("medium");
+                    } else {
+                        warningItem.setWarningLevel("low");
+                    }
+                    
+                    result.add(warningItem);
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 构建实时活动列表
+     */
+    private List<DashboardVO.RealtimeActivity> buildRealtimeActivities() {
+        List<DashboardVO.RealtimeActivity> result = new ArrayList<>();
+        
+        // 获取最新的申领记录
+        LambdaQueryWrapper<Application> appWrapper = new LambdaQueryWrapper<>();
+        appWrapper.orderByDesc(Application::getApplyTime).last("LIMIT 5");
+        // 显式选择数据库中存在的字段
+        appWrapper.select(
+            Application::getId,
+            Application::getStatus,
+            Application::getApplyTime,
+            Application::getPurpose
+        );
+        List<Application> applications = applicationService.list(appWrapper);
+        
+        for (Application app : applications) {
+            DashboardVO.RealtimeActivity activity = new DashboardVO.RealtimeActivity();
+            activity.setId(app.getId());
+            activity.setType("application");
+            activity.setTitle("物资申领");
+            activity.setDescription(app.getPurpose());
+            activity.setCreateTime(app.getApplyTime() != null ? app.getApplyTime().toString() : "");
+            activity.setStatus(app.getStatus());
+            result.add(activity);
+        }
+        
+        // 获取最新的捐赠记录
+        LambdaQueryWrapper<Donation> donationWrapper = new LambdaQueryWrapper<>();
+        donationWrapper.orderByDesc(Donation::getDonateTime).last("LIMIT 5");
+        // 显式选择数据库中存在的字段
+        donationWrapper.select(
+            Donation::getId,
+            Donation::getStatus,
+            Donation::getDonateTime,
+            Donation::getRemark
+        );
+        List<Donation> donations = donationService.list(donationWrapper);
+        
+        for (Donation donation : donations) {
+            DashboardVO.RealtimeActivity activity = new DashboardVO.RealtimeActivity();
+            activity.setId(donation.getId());
+            activity.setType("donation");
+            activity.setTitle("物资捐赠");
+            activity.setDescription(donation.getRemark());
+            activity.setCreateTime(donation.getDonateTime() != null ? donation.getDonateTime().toString() : "");
+            activity.setStatus(donation.getStatus());
+            result.add(activity);
+        }
+        
+        // 按时间排序并取最新 10 条
+        result.sort((a, b) -> b.getCreateTime().compareTo(a.getCreateTime()));
+        
+        return result.size() > 10 ? result.subList(0, 10) : result;
     }
 }

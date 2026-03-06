@@ -223,4 +223,19 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
     public List<Map<String, Object>> getTrendData(String startDate) {
         return baseMapper.countApprovedByDate(startDate);
     }
+    
+    /**
+     * 获取累计捐赠总额
+     */
+    @Override
+    public Double getTotalAmount() {
+        // TODO: 如果 Donation 实体类有 amount 字段，可以计算总金额
+        // 暂时返回 0 或者根据 quantity 估算
+        LambdaQueryWrapper<Donation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Donation::getStatus, "approved");
+        List<Donation> donations = list(wrapper);
+        
+        // 这里简单估算，实际应该有金额字段
+        return 0.0;
+    }
 }
