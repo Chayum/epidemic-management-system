@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.factory.rewrite.RewriteFunction;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -12,17 +13,21 @@ import reactor.core.publisher.Mono;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Component
 @Slf4j
 /**
  * 登录响应处理过滤器
- * 用于生成Token并重写响应体
+ * 用于生成 Token 并重写响应体，同时将 Token 存储到 Redis
  */
 public class LoginResponseRewriteFunction implements RewriteFunction<Map, Map> {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public Publisher<Map> apply(ServerWebExchange exchange, Map body) {
@@ -51,7 +56,7 @@ public class LoginResponseRewriteFunction implements RewriteFunction<Map, Map> {
 
             Map<String, Object> userMap = (Map<String, Object>) dataObj;
             
-            // 提取用户信息生成Token
+            // 提取用户信息生成 Token
             // 注意：数字类型在反序列化时可能是 Integer 或 Long
             Object idObj = userMap.get("id");
             Long userId = null;
@@ -66,6 +71,12 @@ public class LoginResponseRewriteFunction implements RewriteFunction<Map, Map> {
 
             if (userId != null && username != null) {
                 String token = jwtUtil.generateToken(userId, username, role);
+                
+                // 将 Token 存储到 Redis，key 格式：auth:token:{userId}
+                String tokenKey = "auth:token:" + userId;
+                long expirationSeconds = 7200; // 2 小时，与 JWT 过期时间一致
+                redisTemplate.opsForValue().set(tokenKey, token, expirationSeconds, TimeUnit.SECONDS);
+                log.info("Token stored in Redis for user: {}, key: {}", username, tokenKey);
                 
                 // 构建 LoginResponse 结构
                 Map<String, Object> loginResponse = new LinkedHashMap<>();

@@ -26,6 +26,13 @@ spring:
           filters:
             - StripPrefix=1
             - LoginToken
+        - id: auth-logout
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/logout
+          filters:
+            - StripPrefix=1
+            - LogoutToken
         - id: user-service
           uri: http://localhost:8081
           predicates:
@@ -47,7 +54,7 @@ spring:
 
 jwt:
   secret: epidemic-material-management-secret-key-2024-super-secret
-  expiration: 604800000
+  expiration: 7200000
 
 auth:
   whitelist:
@@ -57,6 +64,21 @@ auth:
     - /swagger-ui.html
     - /webjars/**
     - /v3/api-docs/**
+
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
 #      globalcors:
 #        cors-configurations:
 #          '[/**]':
@@ -73,4 +95,4 @@ auth:
 
 logging:
   level:
-    com.epidemic: debug
+    com.epidemic: info

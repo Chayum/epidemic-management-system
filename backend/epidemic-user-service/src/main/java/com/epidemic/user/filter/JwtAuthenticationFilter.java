@@ -1,6 +1,7 @@
 package com.epidemic.user.filter;
 
 import com.epidemic.user.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,9 +34,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         if (StringUtils.hasText(token)) {
             try {
-                String username = jwtUtil.getUsernameFromToken(token);
-                Long userId = jwtUtil.getUserIdFromToken(token);
-                String role = jwtUtil.getRoleFromToken(token);
+                Claims claims = jwtUtil.getClaimsFromToken(token);
+                String username = claims.getSubject();
+                Long userId = claims.get("userId", Long.class);
+                String role = claims.get("role", String.class);
                 
                 if (StringUtils.hasText(username) && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(

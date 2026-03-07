@@ -10,11 +10,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 认证管理控制器
@@ -29,6 +31,8 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 用户登录接口
@@ -41,18 +45,34 @@ public class AuthController {
     @Operation(summary = "用户登录")
     @PostMapping("/login")
     public Result<User> login(@Valid @RequestBody LoginRequest loginRequest) {
+        String username = loginRequest.getUsername();
+        
+        // 检查登录失败次数
+        String failKey = "auth:login:fail:" + username;
+        Integer failCount = (Integer) redisTemplate.opsForValue().get(failKey);
+        if (failCount != null && failCount >= 5) {
+            Long expireTime = redisTemplate.getExpire(failKey);
+            if (expireTime != null && expireTime > 0) {
+                return Result.error("密码错误次数过多，请 " + expireTime + " 秒后再试");
+            }
+        }
+
         // 构建查询条件，根据用户名查询用户
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(User::getUsername, loginRequest.getUsername());
+        wrapper.eq(User::getUsername, username);
         User user = userService.getOne(wrapper);
 
         // 校验用户是否存在
         if (user == null) {
+            // 增加失败次数
+            incrementLoginFailCount(failKey);
             return Result.error("用户不存在");
         }
 
         // 校验密码（此处应使用加密比对，当前为明文比对示例）
         if (!Objects.equals(user.getPassword(), loginRequest.getPassword())) {
+            // 增加失败次数
+            incrementLoginFailCount(failKey);
             return Result.error("用户名或密码错误");
         }
 
@@ -66,19 +86,40 @@ public class AuthController {
         if (StringUtils.hasText(requestRole)) {
             if ("admin".equals(requestRole)) {
                 if (!"admin".equals(user.getRole())) {
+                    incrementLoginFailCount(failKey);
                     return Result.error("账户或密码错误");
                 }
             } else {
                 if ("admin".equals(user.getRole())) {
+                    incrementLoginFailCount(failKey);
                     return Result.error("账户或密码错误");
                 }
             }
         }
         
+        // 登录成功，清除失败次数记录
+        redisTemplate.delete(failKey);
+        log.info("用户 {} 登录成功，已清除失败次数记录", username);
+        
         // 密码脱敏
         user.setPassword(null);
 
         return Result.success(user);
+    }
+
+    /**
+     * 增加登录失败次数
+     * @param failKey Redis key
+     */
+    private void incrementLoginFailCount(String failKey) {
+        Integer count = (Integer) redisTemplate.opsForValue().increment(failKey);
+        if (count == 1) {
+            // 第一次失败，设置 10 分钟过期
+            redisTemplate.expire(failKey, 10, TimeUnit.MINUTES);
+            log.info("用户登录失败，已记录失败次数：1");
+        } else {
+            log.info("用户登录失败，累计失败次数：{}", count);
+        }
     }
 
     /**
@@ -149,6 +190,11 @@ public class AuthController {
         updateUser.setId(userId);
         updateUser.setPassword(newPwd);
         userService.updateUser(updateUser);
+        
+        // 清除 Redis 中的 Token，强制用户重新登录
+        String tokenKey = "auth:token:" + userId;
+        redisTemplate.delete(tokenKey);
+        log.info("用户 {} 修改密码成功，已清除 Redis 中的 Token", user.getUsername());
         
         return Result.success("密码修改成功");
     }
