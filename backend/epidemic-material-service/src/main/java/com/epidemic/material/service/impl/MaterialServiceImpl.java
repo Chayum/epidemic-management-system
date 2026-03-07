@@ -9,6 +9,7 @@ import com.epidemic.material.config.RedisConfig;
 import com.epidemic.material.entity.Material;
 import com.epidemic.material.mapper.MaterialMapper;
 import com.epidemic.material.service.CacheService;
+import com.epidemic.material.service.InventoryLogService;
 import com.epidemic.material.service.MaterialService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
 
     @Autowired
     private CacheService cacheService;
+
+    @Autowired
+    private InventoryLogService inventoryLogService;
 
     /**
      * 分页查询物资列表
@@ -255,6 +259,27 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         map.put("code", code);
         map.put("name", name);
         return map;
+    }
+
+    /**
+     * 检查物资预警状态
+     * 根据库存数量和阈值判断是否需要预警
+     * 该方法仅用于日志记录，实际预警状态在查询时动态计算
+     * 
+     * @param material 物资对象
+     */
+    private void checkWarningStatus(Material material) {
+        if (material == null) {
+            return;
+        }
+        
+        Integer stock = material.getStock();
+        Integer threshold = material.getThreshold();
+        
+        if (stock != null && threshold != null && stock < threshold) {
+            log.debug("物资 {} 库存低于阈值，需要预警：当前库存={}, 阈值={}", 
+                     material.getName(), stock, threshold);
+        }
     }
 
     /**

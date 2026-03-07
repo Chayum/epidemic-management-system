@@ -64,19 +64,19 @@ public class InventoryLogServiceImpl extends ServiceImpl<InventoryLogMapper, Inv
 
     @Override
     public void log(String materialId, String materialName, String type, Integer quantity, Integer before, Integer after, String relatedId, Long operatorId, String operatorName, String remark) {
-        InventoryLog log = new InventoryLog();
-        log.setMaterialId(materialId);
-        log.setMaterialName(materialName);
-        log.setChangeType(type);
-        log.setChangeQuantity(quantity);
-        log.setBeforeQuantity(before);
-        log.setAfterQuantity(after);
-        log.setRelatedId(relatedId);
-        log.setOperatorId(operatorId);
-        log.setOperatorName(operatorName);
-        log.setRemark(remark);
-        log.setOperateTime(LocalDateTime.now());
-        save(log);
+        InventoryLog inventoryLog = new InventoryLog();
+        inventoryLog.setMaterialId(materialId);
+        inventoryLog.setMaterialName(materialName);
+        inventoryLog.setChangeType(type);
+        inventoryLog.setChangeQuantity(quantity);
+        inventoryLog.setBeforeQuantity(before);
+        inventoryLog.setAfterQuantity(after);
+        inventoryLog.setRelatedId(relatedId);
+        inventoryLog.setOperatorId(operatorId);
+        inventoryLog.setOperatorName(operatorName);
+        inventoryLog.setRemark(remark);
+        inventoryLog.setOperateTime(LocalDateTime.now());
+        save(inventoryLog);
         
         // 清除今日出入库缓存
         cacheService.deleteTodayStats();

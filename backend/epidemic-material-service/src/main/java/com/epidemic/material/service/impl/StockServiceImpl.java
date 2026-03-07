@@ -177,6 +177,12 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
                 .eq(StockOrderItem::getOrderId, order.getId()));
 
         for (StockOrderItem item : items) {
+            // 使用数组来存储 lambda 中的值
+            final Material[] materialRef = new Material[1];
+            final int[] currentStockRef = new int[1];
+            final int[] afterStockRef = new int[1];
+            final int[] changeQtyRef = new int[1];
+            
             // 使用分布式锁保证库存操作的原子性
             String lockKey = "stock:lock:" + item.getMaterialId();
             distributedLockUtil.executeWithLock(lockKey, () -> {
@@ -208,17 +214,23 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
                 checkWarningStatus(material);
                 materialService.updateById(material);
                 
+                // 保存值到数组供外部使用
+                materialRef[0] = material;
+                currentStockRef[0] = currentStock;
+                afterStockRef[0] = afterStock;
+                changeQtyRef[0] = changeQty;
+                
                 return null;
             });
 
             // 记录日志
             inventoryLogService.log(
-                    material.getId(),
-                    material.getName(),
+                    materialRef[0].getId(),
+                    materialRef[0].getName(),
                     order.getType(), // in/out/adjust
-                    "inbound".equals(order.getType()) ? changeQty : -changeQty,
-                    currentStock,
-                    afterStock,
+                    "inbound".equals(order.getType()) ? changeQtyRef[0] : -changeQtyRef[0],
+                    currentStockRef[0],
+                    afterStockRef[0],
                     order.getId(),
                     userId,
                     username,
