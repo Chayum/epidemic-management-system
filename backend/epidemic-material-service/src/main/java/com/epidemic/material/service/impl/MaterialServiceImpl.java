@@ -5,9 +5,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.common.exception.BusinessException;
 import com.epidemic.common.result.PageResult;
+import com.epidemic.material.config.RedisConfig;
 import com.epidemic.material.entity.Material;
 import com.epidemic.material.mapper.MaterialMapper;
+import com.epidemic.material.service.CacheService;
 import com.epidemic.material.service.MaterialService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -16,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -23,7 +29,11 @@ import java.util.stream.Collectors;
  * 负责物资的增删改查、库存管理、预警分析及统计功能
  */
 @Service
+@Slf4j
 public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> implements MaterialService {
+
+    @Autowired
+    private CacheService cacheService;
 
     /**
      * 分页查询物资列表
@@ -144,12 +154,20 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
      */
     @Override
     public List<Map<String, Object>> getWarningList() {
+        // 1. 尝试从缓存获取
+        Object cachedList = cacheService.getWarningList();
+        if (cachedList != null) {
+            log.debug("从缓存获取预警列表");
+            return (List<Map<String, Object>>) cachedList;
+        }
+        
+        // 2. 缓存未命中，从数据库查询
         LambdaQueryWrapper<Material> wrapper = new LambdaQueryWrapper<>();
         wrapper.apply("stock < threshold"); 
         
         List<Material> list = baseMapper.selectList(wrapper);
         
-        return list.stream().map(m -> {
+        List<Map<String, Object>> resultList = list.stream().map(m -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", m.getId());
             map.put("name", m.getName());
@@ -157,10 +175,86 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
             map.put("threshold", m.getThreshold());
             map.put("unit", m.getUnit());
             map.put("type", m.getType());
-            // 库存 < 阈值的一半为高风险(high)，否则为低风险(low)
+            // 库存 < 阈值的一半为高风险 (high)，否则为低风险 (low)
             map.put("warningLevel", m.getStock() < m.getThreshold() * 0.5 ? "high" : "low");
             return map;
         }).collect(Collectors.toList());
+        
+        // 3. 存入缓存
+        cacheService.setWarningList(resultList);
+        log.info("库存预警列表已缓存，共 {} 条", resultList.size());
+        
+        return resultList;
+    }
+
+    /**
+     * 获取物资类型列表（带缓存）
+     */
+    public List<Map<String, String>> getTypeList() {
+        // 1. 尝试从缓存获取
+        Object cachedTypes = cacheService.getMaterialTypes();
+        if (cachedTypes != null) {
+            log.debug("从缓存获取物资类型列表");
+            return (List<Map<String, String>>) cachedTypes;
+        }
+        
+        // 2. 缓存未命中，返回预定义的类型列表
+        List<Map<String, String>> typeList = new ArrayList<>();
+        typeList.add(createTypeMap("protective", "防护物资"));
+        typeList.add(createTypeMap("disinfection", "消杀物资"));
+        typeList.add(createTypeMap("testing", "检测物资"));
+        typeList.add(createTypeMap("equipment", "医疗设备"));
+        typeList.add(createTypeMap("other", "其他物资"));
+        
+        // 3. 存入缓存
+        cacheService.setMaterialTypes(typeList);
+        log.info("物资类型列表已缓存");
+        
+        return typeList;
+    }
+
+    /**
+     * 获取仓库列表（带缓存）
+     */
+    public List<Map<String, Object>> getWarehouseList() {
+        // 1. 尝试从缓存获取
+        Object cachedWarehouses = cacheService.getWarehouses();
+        if (cachedWarehouses != null) {
+            log.debug("从缓存获取仓库列表");
+            return (List<Map<String, Object>>) cachedWarehouses;
+        }
+        
+        // 2. 缓存未命中，从数据库查询 distinct warehouse
+        List<String> warehouses = baseMapper.selectMaps(new LambdaQueryWrapper<Material>()
+                .select(Material::getWarehouse)
+                .groupBy(Material::getWarehouse))
+                .stream()
+                .map(m -> (String) m.get("warehouse"))
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        
+        List<Map<String, Object>> resultList = warehouses.stream().map(warehouse -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("name", warehouse);
+            return map;
+        }).collect(Collectors.toList());
+        
+        // 3. 存入缓存
+        cacheService.setWarehouses(resultList);
+        log.info("仓库列表已缓存，共 {} 个", resultList.size());
+        
+        return resultList;
+    }
+
+    /**
+     * 创建类型 Map
+     */
+    private Map<String, String> createTypeMap(String code, String name) {
+        Map<String, String> map = new HashMap<>();
+        map.put("code", code);
+        map.put("name", name);
+        return map;
     }
 
     /**
@@ -173,16 +267,41 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
      */
     @Override
     public void checkInventory(String inventoryId, Integer actualStock, String remark) {
-        // 解析物资ID
+        // 解析物资 ID
         String materialId = inventoryId.replace("INV", "");
         Material material = baseMapper.selectById(materialId);
         if (material == null) {
             throw new BusinessException("物资不存在");
         }
-        // 更新库存
-        material.setStock(actualStock);
-        material.setUpdateTime(LocalDateTime.now());
-        baseMapper.updateById(material);
+        
+        // 如果盘点数量与账面数量不一致，则生成盘点差异记录
+        if (!actualStock.equals(material.getStock())) {
+            Integer difference = actualStock - material.getStock();
+            
+            // 更新库存
+            material.setStock(actualStock);
+            material.setUpdateTime(LocalDateTime.now());
+            checkWarningStatus(material);
+            baseMapper.updateById(material);
+            
+            // 清除缓存
+            cacheService.deleteMaterialStats();
+            cacheService.deleteWarningList();
+            
+            // 记录库存变动日志
+            inventoryLogService.log(
+                materialId,
+                material.getName(),
+                "adjust",
+                difference,
+                material.getStock() - difference,
+                actualStock,
+                null,
+                null,
+                "系统",
+                remark != null ? remark : "库存盘点"
+            );
+        }
     }
 
     /**
@@ -193,6 +312,13 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
      */
     @Override
     public Map<String, Object> getStats() {
+        // 1. 尝试从缓存获取
+        Map<String, Object> cachedStats = cacheService.getMaterialStats();
+        if (cachedStats != null) {
+            return cachedStats;
+        }
+        
+        // 2. 缓存未命中，从数据库查询
         Map<String, Object> stats = new HashMap<>();
         // 统计总库存
         stats.put("totalStock", baseMapper.sumStock());
@@ -214,6 +340,10 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         }
         
         stats.put("typeStats", typeStats);
+        
+        // 3. 存入缓存
+        cacheService.setMaterialStats(stats);
+        log.info("物资统计数据已缓存");
         
         return stats;
     }

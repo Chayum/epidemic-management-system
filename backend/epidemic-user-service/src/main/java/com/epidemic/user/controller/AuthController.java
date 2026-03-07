@@ -49,7 +49,15 @@ public class AuthController {
         
         // 检查登录失败次数
         String failKey = "auth:login:fail:" + username;
-        Integer failCount = (Integer) redisTemplate.opsForValue().get(failKey);
+        Object failCountObj = redisTemplate.opsForValue().get(failKey);
+        Long failCount = null;
+        if (failCountObj != null) {
+            if (failCountObj instanceof Integer) {
+                failCount = ((Integer) failCountObj).longValue();
+            } else if (failCountObj instanceof Long) {
+                failCount = (Long) failCountObj;
+            }
+        }
         if (failCount != null && failCount >= 5) {
             Long expireTime = redisTemplate.getExpire(failKey);
             if (expireTime != null && expireTime > 0) {
@@ -112,12 +120,20 @@ public class AuthController {
      * @param failKey Redis key
      */
     private void incrementLoginFailCount(String failKey) {
-        Integer count = (Integer) redisTemplate.opsForValue().increment(failKey);
-        if (count == 1) {
+        Object countObj = redisTemplate.opsForValue().increment(failKey);
+        Long count = null;
+        if (countObj != null) {
+            if (countObj instanceof Integer) {
+                count = ((Integer) countObj).longValue();
+            } else if (countObj instanceof Long) {
+                count = (Long) countObj;
+            }
+        }
+        if (count != null && count == 1) {
             // 第一次失败，设置 10 分钟过期
             redisTemplate.expire(failKey, 10, TimeUnit.MINUTES);
             log.info("用户登录失败，已记录失败次数：1");
-        } else {
+        } else if (count != null) {
             log.info("用户登录失败，累计失败次数：{}", count);
         }
     }

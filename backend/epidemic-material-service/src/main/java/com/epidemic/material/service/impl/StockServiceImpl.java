@@ -8,11 +8,14 @@ import com.epidemic.material.entity.*;
 import com.epidemic.material.mapper.MaterialCostMapper;
 import com.epidemic.material.mapper.StockOrderItemMapper;
 import com.epidemic.material.mapper.StockOrderMapper;
+import com.epidemic.material.service.CacheService;
 import com.epidemic.material.service.InventoryLogService;
 import com.epidemic.material.service.MaterialService;
 import com.epidemic.material.service.StockService;
+import com.epidemic.material.util.DistributedLockUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -38,6 +41,12 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
     private final MaterialService materialService;
     private final InventoryLogService inventoryLogService;
     private final MaterialCostMapper materialCostMapper;
+
+    @Autowired
+    private CacheService cacheService;
+
+    @Autowired
+    private DistributedLockUtil distributedLockUtil;
 
     @Override
     public Page<InventoryLedgerVO> getInventoryLedger(Integer page, Integer size, String keyword) {
@@ -156,6 +165,11 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
         order.setAuditTime(LocalDateTime.now());
         order.setRemark(remark); // 追加审核备注
         updateById(order);
+        
+        // 清除物资统计和预警列表缓存
+        cacheService.deleteMaterialStats();
+        cacheService.deleteWarningList();
+        log.info("库存单据审核完成，已清除相关缓存");
     }
 
     private void executeStockChange(StockOrder order, Long userId, String username) {
@@ -163,33 +177,39 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
                 .eq(StockOrderItem::getOrderId, order.getId()));
 
         for (StockOrderItem item : items) {
-            Material material = materialService.getById(item.getMaterialId());
-            if (material == null) {
-                throw new RuntimeException("物资不存在: " + item.getMaterialId());
-            }
-
-            int currentStock = material.getStock();
-            int changeQty = item.getQuantity();
-            int afterStock;
-
-            if ("inbound".equals(order.getType())) {
-                afterStock = currentStock + changeQty;
-                // 更新物资成本（移动加权平均）
-                updateMaterialCost(item.getMaterialId(), item.getPrice(), item.getQuantity(), currentStock);
-            } else if ("outbound".equals(order.getType())) {
-                if (currentStock < changeQty) {
-                    throw new RuntimeException("库存不足: " + material.getName());
+            // 使用分布式锁保证库存操作的原子性
+            String lockKey = "stock:lock:" + item.getMaterialId();
+            distributedLockUtil.executeWithLock(lockKey, () -> {
+                Material material = materialService.getById(item.getMaterialId());
+                if (material == null) {
+                    throw new RuntimeException("物资不存在：" + item.getMaterialId());
                 }
-                afterStock = currentStock - changeQty;
-            } else {
-                throw new RuntimeException("未知单据类型");
-            }
 
-            // 更新库存
-            material.setStock(afterStock);
-            // 检查预警状态
-            checkWarningStatus(material);
-            materialService.updateById(material);
+                int currentStock = material.getStock();
+                int changeQty = item.getQuantity();
+                int afterStock;
+
+                if ("inbound".equals(order.getType())) {
+                    afterStock = currentStock + changeQty;
+                    // 更新物资成本（移动加权平均）
+                    updateMaterialCost(item.getMaterialId(), item.getPrice(), item.getQuantity(), currentStock);
+                } else if ("outbound".equals(order.getType())) {
+                    if (currentStock < changeQty) {
+                        throw new RuntimeException("库存不足：" + material.getName());
+                    }
+                    afterStock = currentStock - changeQty;
+                } else {
+                    throw new RuntimeException("未知单据类型");
+                }
+
+                // 更新库存
+                material.setStock(afterStock);
+                // 检查预警状态
+                checkWarningStatus(material);
+                materialService.updateById(material);
+                
+                return null;
+            });
 
             // 记录日志
             inventoryLogService.log(

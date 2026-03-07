@@ -5,7 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.material.entity.InventoryLog;
 import com.epidemic.material.mapper.InventoryLogMapper;
+import com.epidemic.material.service.CacheService;
 import com.epidemic.material.service.InventoryLogService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -19,10 +22,22 @@ import java.util.Map;
  * 库存变动日志服务实现类
  */
 @Service
+@Slf4j
 public class InventoryLogServiceImpl extends ServiceImpl<InventoryLogMapper, InventoryLog> implements InventoryLogService {
+
+    @Autowired
+    private CacheService cacheService;
 
     @Override
     public Map<String, Integer> getTodayStats() {
+        // 1. 尝试从缓存获取
+        Map<String, Integer> cachedStats = cacheService.getTodayStats();
+        if (cachedStats != null) {
+            log.debug("从缓存获取今日出入库统计");
+            return cachedStats;
+        }
+        
+        // 2. 缓存未命中，从数据库查询
         Map<String, Integer> stats = new HashMap<>();
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         
@@ -39,6 +54,10 @@ public class InventoryLogServiceImpl extends ServiceImpl<InventoryLogMapper, Inv
                 .ge(InventoryLog::getOperateTime, todayStart));
         int outboundCount = outboundLogs.stream().mapToInt(l -> Math.abs(l.getChangeQuantity())).sum();
         stats.put("todayOutbound", outboundCount);
+        
+        // 3. 存入缓存
+        cacheService.setTodayStats(stats);
+        log.info("今日出入库统计已缓存");
         
         return stats;
     }
@@ -58,6 +77,10 @@ public class InventoryLogServiceImpl extends ServiceImpl<InventoryLogMapper, Inv
         log.setRemark(remark);
         log.setOperateTime(LocalDateTime.now());
         save(log);
+        
+        // 清除今日出入库缓存
+        cacheService.deleteTodayStats();
+        log.debug("已清除今日出入库缓存");
     }
 
     @Override

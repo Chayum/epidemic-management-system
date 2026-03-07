@@ -14,6 +14,7 @@ import com.epidemic.material.entity.Material;
 import com.epidemic.material.mapper.ApplicationMapper;
 import com.epidemic.material.mapper.MaterialMapper;
 import com.epidemic.material.service.ApplicationService;
+import com.epidemic.material.service.CacheService;
 import com.epidemic.material.vo.ApplicationVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +48,9 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
 
     @Autowired
     private StockService stockService;
+
+    @Autowired
+    private CacheService cacheService;
 
     /**
      * 分页查询申请列表
@@ -173,7 +177,10 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
         application.setApproverId(approverId);
         application.setApproverName(approverName);
         baseMapper.updateById(application);
-        log.info("管理员[{}]审批了物资申请: {}, 结果: {}", approverId, application.getId(), approveDTO.getStatus());
+        
+        // 清除申请单状态缓存
+        cacheService.deleteApplicationStatus(application.getId());
+        log.info("管理员 [{}] 审批了物资申请：{}, 结果：{}, 已清除缓存", approverId, application.getId(), approveDTO.getStatus());
     }
 
     /**

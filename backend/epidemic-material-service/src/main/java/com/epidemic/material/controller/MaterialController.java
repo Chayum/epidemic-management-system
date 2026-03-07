@@ -47,13 +47,33 @@ public class MaterialController {
 
     /**
      * 获取物资详情
-     * @param id 物资ID
+     * @param id 物资 ID
      * @return 物资实体对象
      */
     @Operation(summary = "获取物资详情")
     @GetMapping("/{id}")
     public Result<Material> getMaterialDetail(@PathVariable String id) {
         return Result.success(materialService.getById(id));
+    }
+
+    /**
+     * 获取物资类型列表
+     * @return 物资类型列表
+     */
+    @Operation(summary = "获取物资类型列表")
+    @GetMapping("/types")
+    public Result<List<Map<String, String>>> getTypeList() {
+        return Result.success(materialService.getTypeList());
+    }
+
+    /**
+     * 获取仓库列表
+     * @return 仓库列表
+     */
+    @Operation(summary = "获取仓库列表")
+    @GetMapping("/warehouses")
+    public Result<List<Map<String, Object>>> getWarehouseList() {
+        return Result.success(materialService.getWarehouseList());
     }
 
     /**

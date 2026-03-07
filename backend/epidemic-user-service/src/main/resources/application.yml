@@ -27,13 +27,26 @@ spring:
       pool-name: HikariCP
       max-lifetime: 1800000
       connection-timeout: 30000
+  data:
+    redis:
+          host: 192.168.213.130
+          port: 6379
+          password:
+          database: 0
+          timeout: 5000ms
+          lettuce:
+            pool:
+              max-active: 8
+              max-idle: 8
+              min-idle: 0
+              max-wait: -1ms
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   type-aliases-package: com.epidemic.user.entity
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.noop.NoLoggingImpl
+    # log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
   global-config:
     db-config:
       id-type: auto
@@ -45,20 +58,6 @@ jwt:
   secret: epidemic-material-management-secret-key-2024-super-secret
   expiration: 604800000
 
-spring:
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: 
-      database: 0
-      timeout: 5000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
 
 knife4j:
   enable: true

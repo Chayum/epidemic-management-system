@@ -69,4 +69,16 @@ public interface MaterialService extends IService<Material> {
      * @return 库存总量
      */
     Long getTotalStock();
+
+    /**
+     * 获取物资类型列表
+     * @return 类型列表
+     */
+    List<Map<String, String>> getTypeList();
+
+    /**
+     * 获取仓库列表
+     * @return 仓库列表
+     */
+    List<Map<String, Object>> getWarehouseList();
 }
