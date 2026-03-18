@@ -141,59 +141,6 @@
                 </div>
               </div>
             </el-tab-pane>
-            
-            <el-tab-pane label="偏好设置" name="preferences">
-              <div class="tab-content">
-                <h4 class="section-title">界面主题</h4>
-                <div class="theme-settings">
-                  <div class="theme-option">
-                    <div class="theme-preview light" @click="setTheme('light')">
-                      <el-icon v-if="currentTheme === 'light'"><Check /></el-icon>
-                    </div>
-                    <span class="theme-label">浅色主题</span>
-                  </div>
-                  <div class="theme-option">
-                    <div class="theme-preview dark" @click="setTheme('dark')">
-                      <el-icon v-if="currentTheme === 'dark'"><Check /></el-icon>
-                    </div>
-                    <span class="theme-label">深色主题</span>
-                  </div>
-                </div>
-                
-                <el-divider />
-                
-                <h4 class="section-title">通知设置</h4>
-                <div class="notification-settings">
-                  <div class="setting-row">
-                    <div class="setting-info">
-                      <span class="setting-title">系统通知</span>
-                      <span class="setting-desc">接收系统公告和更新提醒</span>
-                    </div>
-                    <el-switch v-model="notifications.system" @change="handleNotificationChange('system')" />
-                  </div>
-                  <div class="setting-row">
-                    <div class="setting-info">
-                      <span class="setting-title">操作通知</span>
-                      <span class="setting-desc">重要操作的确认和结果通知</span>
-                    </div>
-                    <el-switch v-model="notifications.operation" @change="handleNotificationChange('operation')" />
-                  </div>
-                  <div class="setting-row">
-                    <div class="setting-info">
-                      <span class="setting-title">消息推送</span>
-                      <span class="setting-desc">实时消息推送提醒</span>
-                    </div>
-                    <el-switch v-model="notifications.message" @change="handleNotificationChange('message')" />
-                  </div>
-                </div>
-                
-                <div class="save-preferences">
-                  <el-button type="primary" @click="handleSavePreferences" :loading="savingPrefs">
-                    保存偏好设置
-                  </el-button>
-                </div>
-              </div>
-            </el-tab-pane>
           </el-tabs>
         </div>
       </el-col>
@@ -206,16 +153,14 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { getUserInfo, updateUserInfo, changePassword } from '@/api/auth'
-import { User, Phone, OfficeBuilding, Calendar, Monitor, Check } from '@element-plus/icons-vue'
+import { User, Phone, OfficeBuilding, Calendar, Monitor } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
 const activeTab = ref('info')
 const savingInfo = ref(false)
 const changingPwd = ref(false)
-const savingPrefs = ref(false)
 const loadingRecords = ref(false)
 const phoneVerified = ref(false)
-const currentTheme = ref('light')
 
 const userInfo = ref({
   id: null,
@@ -274,12 +219,6 @@ const pwdRules = {
     { validator: validateConfirmPwd, trigger: 'blur' }
   ]
 }
-
-const notifications = reactive({
-  system: true,
-  operation: true,
-  message: true
-})
 const infoChanged = computed(() => {
   return JSON.stringify(infoForm) !== JSON.stringify(originalInfo.value)
 })
@@ -399,37 +338,8 @@ const handleChangePwd = async () => {
   })
 }
 
-const setTheme = (theme) => {
-  currentTheme.value = theme
-  ElMessage.success(`已切换到${theme === 'light' ? '浅色' : '深色'}主题`)
-}
-
-const handleNotificationChange = (type) => {
-  console.log('通知设置变更:', type, notifications[type])
-}
-
-const handleSavePreferences = async () => {
-  savingPrefs.value = true
-  try {
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success('偏好设置已保存')
-  } catch (error) {
-    ElMessage.error('保存失败，请稍后重试')
-  } finally {
-    savingPrefs.value = false
-  }
-}
-
 onMounted(() => {
   loadUserInfo()
-  const savedTheme = localStorage.getItem('theme')
-  if (savedTheme) {
-    currentTheme.value = savedTheme
-  }
-})
-
-watch(currentTheme, (newTheme) => {
-  localStorage.setItem('theme', newTheme)
 })
 </script>
 
@@ -553,89 +463,6 @@ watch(currentTheme, (newTheme) => {
   max-width: 500px;
 }
 
-.theme-settings {
-  display: flex;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.theme-option {
-  cursor: pointer;
-  
-  .theme-preview {
-    width: 100px;
-    height: 70px;
-    border-radius: 8px;
-    border: 2px solid #e8e8e8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 8px;
-    transition: all 0.3s;
-    
-    &.light {
-      background: #ffffff;
-      
-      &:hover {
-        border-color: #1890ff;
-      }
-    }
-    
-    &.dark {
-      background: #1f1f1f;
-      
-      &:hover {
-        border-color: #1890ff;
-      }
-    }
-    
-    .el-icon {
-      color: #1890ff;
-      font-size: 24px;
-    }
-  }
-  
-  .theme-label {
-    font-size: 14px;
-    color: #666;
-  }
-}
-
-.notification-settings {
-  margin-bottom: 24px;
-  
-  .setting-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 0;
-    border-bottom: 1px solid #f0f0f0;
-    
-    &:last-child {
-      border-bottom: none;
-    }
-    
-    .setting-info {
-      .setting-title {
-        display: block;
-        font-size: 14px;
-        font-weight: 500;
-        color: #1a1a1a;
-        margin-bottom: 4px;
-      }
-      
-      .setting-desc {
-        font-size: 12px;
-        color: #8c8c8c;
-      }
-    }
-  }
-}
-
-.save-preferences {
-  margin-top: 24px;
-}
-
 .security-tips {
   .security-list {
     margin: 8px 0 0;
@@ -652,11 +479,6 @@ watch(currentTheme, (newTheme) => {
 @media (max-width: 768px) {
   .profile-card {
     margin-bottom: 24px;
-  }
-  
-  .theme-settings {
-    flex-direction: column;
-    align-items: center;
   }
 }
 </style>

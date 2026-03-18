@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
 
 import com.epidemic.material.vo.InventoryLedgerVO;
 import java.util.ArrayList;
+import lombok.Data;
+import lombok.AllArgsConstructor;
 
 /**
  * 库存单据服务实现类
@@ -172,20 +174,28 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
         log.info("库存单据审核完成，已清除相关缓存");
     }
 
+    /**
+     * 库存操作结果封装类
+     */
+    @Data
+    @AllArgsConstructor
+    private static class StockOperationResult {
+        private Material material;
+        private int currentStock;
+        private int afterStock;
+        private int changeQty;
+    }
+
     private void executeStockChange(StockOrder order, Long userId, String username) {
         List<StockOrderItem> items = stockOrderItemMapper.selectList(new LambdaQueryWrapper<StockOrderItem>()
                 .eq(StockOrderItem::getOrderId, order.getId()));
 
         for (StockOrderItem item : items) {
-            // 使用数组来存储 lambda 中的值
-            final Material[] materialRef = new Material[1];
-            final int[] currentStockRef = new int[1];
-            final int[] afterStockRef = new int[1];
-            final int[] changeQtyRef = new int[1];
-            
-            // 使用分布式锁保证库存操作的原子性
+            // 使用带重试机制的分布式锁保证库存操作的原子性
             String lockKey = "stock:lock:" + item.getMaterialId();
-            distributedLockUtil.executeWithLock(lockKey, () -> {
+            
+            // 使用返回值对象，避免数组传递
+            StockOperationResult result = distributedLockUtil.executeWithLockWithRetry(lockKey, () -> {
                 Material material = materialService.getById(item.getMaterialId());
                 if (material == null) {
                     throw new RuntimeException("物资不存在：" + item.getMaterialId());
@@ -214,23 +224,17 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
                 checkWarningStatus(material);
                 materialService.updateById(material);
                 
-                // 保存值到数组供外部使用
-                materialRef[0] = material;
-                currentStockRef[0] = currentStock;
-                afterStockRef[0] = afterStock;
-                changeQtyRef[0] = changeQty;
-                
-                return null;
+                return new StockOperationResult(material, currentStock, afterStock, changeQty);
             });
 
-            // 记录日志
+            // 使用返回值对象记录日志
             inventoryLogService.log(
-                    materialRef[0].getId(),
-                    materialRef[0].getName(),
+                    result.getMaterial().getId(),
+                    result.getMaterial().getName(),
                     order.getType(), // in/out/adjust
-                    "inbound".equals(order.getType()) ? changeQtyRef[0] : -changeQtyRef[0],
-                    currentStockRef[0],
-                    afterStockRef[0],
+                    "inbound".equals(order.getType()) ? result.getChangeQty() : -result.getChangeQty(),
+                    result.getCurrentStock(),
+                    result.getAfterStock(),
                     order.getId(),
                     userId,
                     username,

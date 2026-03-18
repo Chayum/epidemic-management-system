@@ -138,7 +138,7 @@
 import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
-import { getUserStats, getWarningList } from '@/api/stats'
+import { getWarningList } from '@/api/stats'
 import { getNewsList } from '@/api/pandemic'
 
 const currentDate = computed(() => dayjs().format('YYYY年MM月DD日'))

@@ -58,9 +58,10 @@ public class DistributedLockUtil {
 
     /**
      * 执行加锁操作（默认等待时间和锁持有时间）
+     * 等待 3 秒，锁持有时间 30 秒，避免死锁
      */
     public <T> T executeWithLock(String lockKey, Supplier<T> action) {
-        return executeWithLock(lockKey, action, 3, -1);
+        return executeWithLock(lockKey, action, 3, 30);
     }
 
     /**
@@ -68,6 +69,59 @@ public class DistributedLockUtil {
      */
     public void executeWithLock(String lockKey, Runnable action) {
         executeWithLock(lockKey, () -> {
+            action.run();
+            return null;
+        });
+    }
+
+    /**
+     * 执行加锁操作（带重试机制）
+     * 
+     * @param lockKey 锁的 key
+     * @param action 要执行的操作
+     * @param maxRetries 最大重试次数
+     * @param waitTime 每次等待时间（秒）
+     * @param leaseTime 锁持有时间（秒）
+     * @return 操作结果
+     */
+    public <T> T executeWithLockWithRetry(String lockKey, Supplier<T> action, 
+                                         int maxRetries, long waitTime, long leaseTime) {
+        RuntimeException lastException = null;
+        
+        for (int retry = 0; retry <= maxRetries; retry++) {
+            try {
+                return executeWithLock(lockKey, action, waitTime, leaseTime);
+            } catch (RuntimeException e) {
+                lastException = e;
+                if (retry < maxRetries) {
+                    log.warn("获取分布式锁失败，第 {} 次重试，key: {}", retry + 1, lockKey);
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("重试被中断", ie);
+                    }
+                }
+            }
+        }
+        
+        log.error("获取分布式锁失败，已重试 {} 次，key: {}", maxRetries, lockKey);
+        throw lastException;
+    }
+
+    /**
+     * 执行加锁操作（带默认重试机制）
+     * 默认重试 2 次，等待 3 秒，锁持有 30 秒
+     */
+    public <T> T executeWithLockWithRetry(String lockKey, Supplier<T> action) {
+        return executeWithLockWithRetry(lockKey, action, 2, 3, 30);
+    }
+
+    /**
+     * 执行加锁操作（带重试机制，无返回值）
+     */
+    public void executeWithLockWithRetry(String lockKey, Runnable action) {
+        executeWithLockWithRetry(lockKey, () -> {
             action.run();
             return null;
         });

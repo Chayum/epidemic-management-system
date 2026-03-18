@@ -50,3 +50,13 @@ export function getWarningList() {
     method: 'get'
   })
 }
+
+/**
+ * 获取用户个人统计数据
+ */
+export function getUserStats() {
+  return request({
+    url: '/stats/user',
+    method: 'get'
+  })
+}

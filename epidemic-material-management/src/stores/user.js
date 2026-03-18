@@ -65,7 +65,12 @@ export const useUserStore = defineStore('user', () => {
       if (res.code === 200) {
         // 登录成功，保存状态
         setToken(res.data.token)
-        setUserInfo(res.data.userInfo)
+        // 确保用户信息中包含 role 字段
+        const userInfo = {
+          ...res.data.userInfo,
+          role: res.data.userInfo.role || loginData.role
+        }
+        setUserInfo(userInfo)
         return res
       } else {
         throw new Error(res.message || '登录失败')
