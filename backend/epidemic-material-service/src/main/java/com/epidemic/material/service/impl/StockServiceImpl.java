@@ -115,7 +115,7 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
             StockOrderItem item = new StockOrderItem();
             item.setOrderId(order.getId());
             item.setMaterialId(itemDto.getMaterialId());
-            
+
             // 查询物资名称和规格
             Material material = materialService.getById(itemDto.getMaterialId());
             if (material != null) {
@@ -125,21 +125,31 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
             } else {
                 throw new RuntimeException("物资不存在: " + itemDto.getMaterialId());
             }
-            
+
             item.setQuantity(itemDto.getQuantity());
             item.setPrice(itemDto.getPrice() != null ? itemDto.getPrice() : BigDecimal.ZERO);
             item.setAmount(item.getPrice().multiply(new BigDecimal(item.getQuantity())));
             item.setBatchNo(itemDto.getBatchNo());
             item.setExpiryDate(itemDto.getExpiryDate());
             item.setRemark(itemDto.getRemark());
-            
+
             stockOrderItemMapper.insert(item);
             totalAmount = totalAmount.add(item.getAmount());
         }
-        
+
         order.setTotalAmount(totalAmount);
         save(order);
-        
+
+        // 手动入库直接审核通过，立即更新库存
+        if ("manual".equals(dto.getSourceType())) {
+            order.setStatus("approved");
+            order.setAuditorId(userId);
+            order.setAuditorName(username);
+            order.setAuditTime(LocalDateTime.now());
+            updateById(order);
+            executeStockChange(order, userId, username);
+        }
+
         return order.getId();
     }
 

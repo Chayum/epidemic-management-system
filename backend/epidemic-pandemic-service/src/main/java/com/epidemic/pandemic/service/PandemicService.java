@@ -58,4 +58,16 @@ public interface PandemicService extends IService<PandemicNews> {
      * @param pushData 推送数据
      */
     void sendPush(Map<String, Object> pushData);
+
+    /**
+     * 获取用户角色分布统计
+     * @return 角色统计列表
+     */
+    List<Map<String, Object>> getUserRoleStats();
+
+    /**
+     * 删除推送记录
+     * @param id 推送记录ID
+     */
+    void deletePushRecord(Long id);
 }

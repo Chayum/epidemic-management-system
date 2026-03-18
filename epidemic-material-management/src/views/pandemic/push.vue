@@ -39,6 +39,11 @@
                 <el-tag :type="row.status === '成功' ? 'success' : 'danger'" size="small">{{ row.status }}</el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="操作" width="80" fixed="right">
+              <template #default="{ row }">
+                <el-button type="danger" link size="small" @click="handleDelete(row)">删除</el-button>
+              </template>
+            </el-table-column>
           </el-table>
         </div>
       </el-col>
@@ -85,10 +90,10 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Promotion } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
-import { getPushStats, getPushList, sendPush } from '@/api/pandemic'
+import { getPushStats, getPushList, sendPush, getUserRoleStats, deletePushRecord } from '@/api/pandemic'
 
 const dialogVisible = ref(false)
 const formRef = ref(null)
@@ -143,8 +148,24 @@ const fetchRecords = async () => {
   }
 }
 
-const initRoleChart = () => {
+const roleChartData = ref([])
+
+const fetchRoleChart = async () => {
+  try {
+    const res = await getUserRoleStats()
+    if (res.code === 200) {
+      roleChartData.value = res.data
+      initRoleChart(res.data)
+    }
+  } catch (error) {
+    console.error('获取用户角色分布失败', error)
+  }
+}
+
+const initRoleChart = (data) => {
+  if (!roleChartRef.value) return
   const chart = echarts.init(roleChartRef.value)
+  const chartData = data || roleChartData.value
   const option = {
     tooltip: { trigger: 'item', formatter: '{b}: {c}人 ({d}%)' },
     legend: { orient: 'vertical', right: 10, top: 'center' },
@@ -159,11 +180,8 @@ const initRoleChart = () => {
         emphasis: {
           label: { show: true, fontSize: 14, fontWeight: 'bold' }
         },
-        data: [
-          { value: 350, name: '医院用户', itemStyle: { color: '#1890ff' } },
-          { value: 280, name: '社区人员', itemStyle: { color: '#52c41a' } },
-          { value: 120, name: '物资审核员', itemStyle: { color: '#faad14' } },
-          { value: 50, name: '管理员', itemStyle: { color: '#722ed1' } }
+        data: chartData.length > 0 ? chartData : [
+          { value: 0, name: '暂无数据' }
         ]
       }
     ]
@@ -195,10 +213,28 @@ const handleSubmit = async () => {
   })
 }
 
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这条推送记录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await deletePushRecord(row.id)
+    ElMessage.success('删除成功')
+    fetchRecords()
+    fetchStats()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败', error)
+    }
+  }
+}
+
 onMounted(() => {
   fetchStats()
   fetchRecords()
-  initRoleChart()
+  fetchRoleChart()
 })
 </script>
 

@@ -114,7 +114,21 @@ public class StatsController {
         donationWrapper.eq(Donation::getDonorId, userId);
         long myDonationCount = donationService.count(donationWrapper);
         data.put("myDonationCount", myDonationCount);
-        
+
+        // 统计我的待审核捐赠数
+        LambdaQueryWrapper<Donation> pendingDonationWrapper = new LambdaQueryWrapper<>();
+        pendingDonationWrapper.eq(Donation::getDonorId, userId)
+                             .eq(Donation::getStatus, "pending");
+        long myPendingDonationCount = donationService.count(pendingDonationWrapper);
+        data.put("myPendingDonationCount", myPendingDonationCount);
+
+        // 统计我的已通过捐赠数
+        LambdaQueryWrapper<Donation> approvedDonationWrapper = new LambdaQueryWrapper<>();
+        approvedDonationWrapper.eq(Donation::getDonorId, userId)
+                              .eq(Donation::getStatus, "approved");
+        long myApprovedDonationCount = donationService.count(approvedDonationWrapper);
+        data.put("myApprovedDonationCount", myApprovedDonationCount);
+
         return Result.success(data);
     }
     

@@ -7,6 +7,11 @@
           <span class="logo-text">防疫物资调度系统</span>
         </div>
         <div class="header-right">
+          <div class="notification-bell" @click="goToNotification">
+            <el-badge :value="unreadCount" :max="99" :hidden="unreadCount === 0">
+              <el-icon :size="24"><Bell /></el-icon>
+            </el-badge>
+          </div>
           <el-menu
             mode="horizontal"
             :default-active="activeMenu"
@@ -33,8 +38,8 @@
                 <el-dropdown-item command="profile">
                   <el-icon><User /></el-icon>个人中心
                 </el-dropdown-item>
-                <el-dropdown-item command="settings">
-                  <el-icon><Setting /></el-icon>消息通知
+                <el-dropdown-item command="notification">
+                  <el-icon><Bell /></el-icon>消息通知
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon>退出登录
@@ -61,10 +66,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { FirstAidKit, User, Setting, SwitchButton, ArrowDown, More } from '@element-plus/icons-vue'
+import { FirstAidKit, User, Setting, SwitchButton, ArrowDown, More, Bell } from '@element-plus/icons-vue'
+import { getUnreadCount } from '@/api/notification'
 
 const route = useRoute()
 const router = useRouter()
@@ -77,14 +83,54 @@ const canApply = computed(() => ['hospital_user', 'community_staff'].includes(us
 
 const activeMenu = computed(() => route.path)
 
+const unreadCount = ref(0)
+let refreshTimer = null
+
+const fetchUnreadCount = async () => {
+  try {
+    const res = await getUnreadCount()
+    if (res.code === 200) {
+      unreadCount.value = res.data || 0
+    }
+  } catch (error) {
+    console.error('获取未读通知数量失败', error)
+  }
+}
+
+const goToNotification = () => {
+  router.push('/user/notification')
+}
+
 const handleCommand = (command) => {
   if (command === 'logout') {
     userStore.logout()
     router.push('/user/login')
   } else if (command === 'profile') {
     router.push('/user/profile')
+  } else if (command === 'notification') {
+    router.push('/user/notification')
   }
 }
+
+// 定时刷新未读数量
+const startRefreshTimer = () => {
+  fetchUnreadCount()
+  refreshTimer = setInterval(() => {
+    if (userStore.isLoggedIn) {
+      fetchUnreadCount()
+    }
+  }, 30000)
+}
+
+onMounted(() => {
+  startRefreshTimer()
+})
+
+onUnmounted(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+  }
+})
 </script>
 
 <style scoped lang="scss">
@@ -133,6 +179,20 @@ const handleCommand = (command) => {
   display: flex;
   align-items: center;
   gap: 24px;
+}
+
+.notification-bell {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+
+  &:hover {
+    background: #f5f5f5;
+  }
 }
 
 .header-menu {

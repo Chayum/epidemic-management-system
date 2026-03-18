@@ -114,3 +114,22 @@ export const checkInventory = (data) => {
     data
   })
 }
+
+/**
+ * 创建库存单（入库/出库）
+ * @param {Object} data - 库存单数据
+ * @param {string} data.type - 单据类型：inbound-入库，outbound-出库
+ * @param {Array} data.items - 单据明细
+ * @param {string} data.items[].materialId - 物资ID
+ * @param {number} data.items[].quantity - 数量
+ * @param {string} [data.supplier] - 供应商
+ * @param {string} [data.remark] - 备注
+ * @returns {Promise} Axios Promise对象
+ */
+export const createStockOrder = (data) => {
+  return request({
+    url: '/stock/order',
+    method: 'post',
+    data
+  })
+}

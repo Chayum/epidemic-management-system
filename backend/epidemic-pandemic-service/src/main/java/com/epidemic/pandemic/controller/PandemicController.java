@@ -85,4 +85,17 @@ public class PandemicController {
         pandemicService.sendPush(pushData);
         return Result.success("推送发送成功");
     }
+
+    @Operation(summary = "获取用户角色分布统计")
+    @GetMapping("/push/role-stats")
+    public Result<List<Map<String, Object>>> getUserRoleStats() {
+        return Result.success(pandemicService.getUserRoleStats());
+    }
+
+    @Operation(summary = "删除推送记录")
+    @DeleteMapping("/push/{id}")
+    public Result<String> deletePushRecord(@PathVariable Long id) {
+        pandemicService.deletePushRecord(id);
+        return Result.success("删除成功");
+    }
 }

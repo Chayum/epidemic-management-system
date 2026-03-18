@@ -146,3 +146,26 @@ export const sendPush = (data) => {
     data
   })
 }
+
+/**
+ * 获取用户角色分布统计
+ * @returns {Promise} Axios Promise对象
+ */
+export const getUserRoleStats = () => {
+  return request({
+    url: '/pandemic/push/role-stats',
+    method: 'get'
+  })
+}
+
+/**
+ * 删除推送记录
+ * @ {number} id - 推送记录ID
+ * @returns {Promise} Axios Promise对象
+ */
+export const deletePushRecord = (id) => {
+  return request({
+    url: `/pandemic/push/${id}`,
+    method: 'delete'
+  })
+}

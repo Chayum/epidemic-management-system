@@ -87,9 +87,10 @@
           </template>
         </el-table-column>
         <el-table-column prop="expiryDate" label="有效期" width="120" />
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
+            <el-button type="success" link @click="handleAddStock(row)">添加</el-button>
             <el-button type="primary" link @click="handleView(row)">详情</el-button>
             <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
           </template>
@@ -163,6 +164,31 @@
         <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 添加库存弹窗 -->
+    <el-dialog v-model="addStockDialogVisible" title="添加库存" width="500px">
+      <el-form ref="addStockFormRef" :model="addStockForm" :rules="addStockRules" label-width="100px">
+        <el-form-item label="物资名称">
+          <span>{{ addStockForm.materialName }}</span>
+        </el-form-item>
+        <el-form-item label="当前库存">
+          <span>{{ addStockForm.currentStock }}</span>
+        </el-form-item>
+        <el-form-item label="入库数量" prop="quantity">
+          <el-input-number v-model="addStockForm.quantity" :min="1" :controls="true" style="width: 200px" />
+        </el-form-item>
+        <el-form-item label="供应商">
+          <el-input v-model="addStockForm.supplier" placeholder="请输入供应商" clearable />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="addStockForm.remark" type="textarea" :rows="2" placeholder="请输入备注" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="addStockDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="addStockLoading" @click="handleSubmitAddStock">确认入库</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -170,7 +196,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Upload, Plus, Search, Refresh, Box, Warning, Check, Close } from '@element-plus/icons-vue'
-import { getMaterialList, addMaterial, updateMaterial, deleteMaterial } from '@/api/material'
+import { getMaterialList, addMaterial, updateMaterial, deleteMaterial, createStockOrder } from '@/api/material'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -179,6 +205,22 @@ const editDialogVisible = ref(false)
 const editMode = ref('add') // 'add' 或 'edit'
 const saving = ref(false)
 const editFormRef = ref(null)
+const addStockDialogVisible = ref(false)
+const addStockFormRef = ref(null)
+const addStockLoading = ref(false)
+
+const addStockForm = reactive({
+  materialId: '',
+  materialName: '',
+  currentStock: 0,
+  quantity: 1,
+  supplier: '',
+  remark: ''
+})
+
+const addStockRules = {
+  quantity: [{ required: true, message: '请输入入库数量', trigger: 'change' }]
+}
 
 // 搜索表单状态
 const searchForm = reactive({
@@ -371,6 +413,53 @@ const handleDelete = (row) => {
       ElMessage.error('删除失败')
     }
   }).catch(() => {})
+}
+
+// 打开添加库存弹窗
+const handleAddStock = (row) => {
+  Object.assign(addStockForm, {
+    materialId: row.materialId,
+    materialName: row.name,
+    currentStock: row.quantity,
+    quantity: 1,
+    supplier: '',
+    remark: ''
+  })
+  addStockDialogVisible.value = true
+}
+
+// 提交添加库存
+const handleSubmitAddStock = async () => {
+  if (!addStockFormRef.value) return
+  await addStockFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    addStockLoading.value = true
+    try {
+      const payload = {
+        type: 'inbound',
+        sourceType: 'manual',
+        supplier: addStockForm.supplier || undefined,
+        remark: addStockForm.remark || undefined,
+        items: [{
+          materialId: addStockForm.materialId,
+          quantity: addStockForm.quantity
+        }]
+      }
+      const res = await createStockOrder(payload)
+      if (res.code === 200) {
+        ElMessage.success('添加库存成功')
+        addStockDialogVisible.value = false
+        fetchMaterialList()
+      } else {
+        ElMessage.error(res.message || '添加库存失败')
+      }
+    } catch (e) {
+      console.error(e)
+      ElMessage.error('添加库存失败')
+    } finally {
+      addStockLoading.value = false
+    }
+  })
 }
 
 // 保存操作（新增或更新）

@@ -138,7 +138,7 @@
 import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
-import { getWarningList } from '@/api/stats'
+import { getWarningList, getUserStats } from '@/api/stats'
 import { getNewsList } from '@/api/pandemic'
 
 const currentDate = computed(() => dayjs().format('YYYY年MM月DD日'))
@@ -183,7 +183,7 @@ const fetchHomeData = async () => {
         tag: '动态', // Default tag or map from item.type if available
         tagType: 'blue',
         title: item.title,
-        time: dayjs(item.publishTime).format('YYYY-MM-DD')
+        time: item.publishTime ? dayjs(item.publishTime).format('YYYY-MM-DD') : '-'
       }))
     }
   } catch (error) {

@@ -112,6 +112,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Medal, Present, Clock, CircleCheck } from '@element-plus/icons-vue'
 import { getMyDonations } from '@/api/donation'
+import { getUserStats } from '@/api/stats'
 import dayjs from 'dayjs'
 
 const loading = ref(false)
@@ -185,25 +186,34 @@ const fetchData = async () => {
       id: searchForm.id || undefined
       // 后端/donation/my接口不需要传donorId，后端会自动从token获取
     }
-    // 考虑到用户需求是“修复假数据”，先确保能查出来。
-    
+
     const res = await getMyDonations(params)
     if (res.code === 200) {
       tableData.value = res.data.list || []
       pagination.total = res.data.total || 0
-      
-      // 简单更新一下总数统计
-      stats.value[0].value = pagination.total.toString()
-      // 待审核和已通过无法从分页接口直接获取准确总数，除非后端返回
-      // 暂时保持0或不显示，以免误导。
-      stats.value[1].value = '-'
-      stats.value[2].value = '-'
     }
   } catch (error) {
     console.error('获取捐赠记录失败', error)
     ElMessage.error('获取数据失败')
   } finally {
     loading.value = false
+  }
+}
+
+/**
+ * 获取用户捐赠统计数据
+ */
+const fetchStats = async () => {
+  try {
+    const res = await getUserStats()
+    if (res.code === 200) {
+      const data = res.data || {}
+      stats.value[0].value = (data.myDonationCount || 0).toString()
+      stats.value[1].value = (data.myPendingDonationCount || 0).toString()
+      stats.value[2].value = (data.myApprovedDonationCount || 0).toString()
+    }
+  } catch (error) {
+    console.error('获取捐赠统计失败', error)
   }
 }
 
@@ -245,6 +255,7 @@ const handleCertificate = (row) => {
 
 // 组件挂载时自动加载数据
 onMounted(() => {
+  fetchStats()
   fetchData()
 })
 </script>
