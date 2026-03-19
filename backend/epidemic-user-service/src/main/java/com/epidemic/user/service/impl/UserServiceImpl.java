@@ -14,6 +14,8 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 用户服务实现类
@@ -148,5 +150,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public void batchDelete(List<Long> ids) {
         userMapper.deleteBatchIds(ids);
+    }
+
+    @Override
+    public List<Map<String, Object>> getRoleCounts() {
+        return userMapper.selectRoleCounts();
+    }
+
+    @Override
+    public List<Long> getUserIdsByRole(String role) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getStatus, "active");
+        if (StringUtils.hasText(role)) {
+            wrapper.eq(User::getRole, role);
+        } else {
+            wrapper.ne(User::getRole, "admin");
+        }
+        return userMapper.selectList(wrapper).stream().map(User::getId).collect(Collectors.toList());
     }
 }

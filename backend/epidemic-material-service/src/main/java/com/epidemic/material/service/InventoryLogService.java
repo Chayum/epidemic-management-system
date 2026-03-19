@@ -20,6 +20,18 @@ public interface InventoryLogService extends IService<InventoryLog> {
     Map<String, Integer> getTodayStats();
 
     /**
+     * 获取昨日出入库统计（用于趋势计算）
+     * @return Map containing "yesterdayInbound" and "yesterdayOutbound"
+     */
+    Map<String, Integer> getYesterdayStats();
+
+    /**
+     * 获取出入库趋势百分比
+     * @return Map containing "inboundTrend" (positive = up, negative = down) and "outboundTrend"
+     */
+    Map<String, Object> getStatsTrend();
+
+    /**
      * 记录变动日志
      * @param materialId 物资ID
      * @param materialName 物资名称

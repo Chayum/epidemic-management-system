@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.common.exception.BusinessException;
 import com.epidemic.common.result.PageResult;
-import com.epidemic.material.config.RedisConfig;
 import com.epidemic.material.entity.Material;
 import com.epidemic.material.mapper.MaterialMapper;
 import com.epidemic.material.service.CacheService;
@@ -112,7 +111,22 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
             throw new BusinessException("物资ID不能为空");
         }
         material.setUpdateTime(LocalDateTime.now());
+
+        // 检查库存预警状态
+        if (material.getStock() != null && material.getThreshold() != null) {
+            if (material.getStock() < material.getThreshold()) {
+                material.setStatus("warning");
+            } else {
+                material.setStatus("normal");
+            }
+        }
+
         baseMapper.updateById(material);
+
+        // 清除缓存，确保预警列表实时更新
+        cacheService.deleteMaterialStats();
+        cacheService.deleteWarningList();
+        log.info("物资 {} 更新已保存，预警缓存已清除", material.getId());
     }
 
     /**
@@ -167,7 +181,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         
         // 2. 缓存未命中，从数据库查询
         LambdaQueryWrapper<Material> wrapper = new LambdaQueryWrapper<>();
-        wrapper.apply("stock < threshold"); 
+        wrapper.apply("stock < `threshold`"); 
         
         List<Material> list = baseMapper.selectList(wrapper);
         
@@ -272,13 +286,16 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         if (material == null) {
             return;
         }
-        
+
         Integer stock = material.getStock();
         Integer threshold = material.getThreshold();
-        
+
         if (stock != null && threshold != null && stock < threshold) {
-            log.debug("物资 {} 库存低于阈值，需要预警：当前库存={}, 阈值={}", 
+            material.setStatus("warning");
+            log.debug("物资 {} 库存低于阈值，需要预警：当前库存={}, 阈值={}",
                      material.getName(), stock, threshold);
+        } else {
+            material.setStatus("normal");
         }
     }
 

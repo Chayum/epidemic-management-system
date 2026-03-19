@@ -1,33 +1,38 @@
 package com.epidemic.material.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.common.result.PageResult;
-import com.epidemic.material.entity.PandemicNews;
-import com.epidemic.material.mapper.PandemicNewsMapper;
+import com.epidemic.common.result.Result;
+import com.epidemic.common.entity.PandemicNews;
+import com.epidemic.material.feign.PandemicFeignClient;
 import com.epidemic.material.service.PandemicNewsService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 /**
  * 疫情新闻服务实现类
+ * 使用 OpenFeign 调用 pandemic-service 获取数据
  */
 @Service
-public class PandemicNewsServiceImpl extends ServiceImpl<PandemicNewsMapper, PandemicNews> implements PandemicNewsService {
+public class PandemicNewsServiceImpl implements PandemicNewsService {
+
+    @Autowired
+    private PandemicFeignClient pandemicFeignClient;
 
     @Override
     public PageResult<PandemicNews> getNewsList(Integer page, Integer size, String status) {
-        Page<PandemicNews> pageParam = new Page<>(page, size);
-        LambdaQueryWrapper<PandemicNews> wrapper = new LambdaQueryWrapper<>();
-        
-        if (StringUtils.hasText(status)) {
-            wrapper.eq(PandemicNews::getStatus, status);
+        Result<PageResult<PandemicNews>> result = pandemicFeignClient.getNewsList(page, size, status);
+        if (result != null && result.getData() != null) {
+            return result.getData();
         }
-        
-        wrapper.orderByDesc(PandemicNews::getPublishTime);
-        
-        Page<PandemicNews> result = baseMapper.selectPage(pageParam, wrapper);
-        return PageResult.of(result.getRecords(), result.getTotal(), page, size);
+        return PageResult.of(null, 0L, page, size);
+    }
+
+    @Override
+    public PandemicNews getById(String id) {
+        Result<PandemicNews> result = pandemicFeignClient.getNewsDetail(id);
+        if (result != null && result.getData() != null) {
+            return result.getData();
+        }
+        return null;
     }
 }

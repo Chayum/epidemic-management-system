@@ -1,34 +1,11 @@
-server:
-  port: 8083
-
 spring:
   application:
     name: epidemic-pandemic-service
-  cloud:
-    nacos:
-      discovery:
-        server-addr: 192.168.150.100:8848
-      config:
-        server-addr: 192.168.150.100:8848
-        file-extension: yaml
-        import-check:
-          enabled: false
-  data:
-    redis:
-      host: 192.168.150.100
-      port: 6379
-      password:
-      database: 0
-      timeout: 5000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-          max-wait: -1ms
+  config:
+    import: optional:classpath:common-config.yml
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.150.100:3306/epidemic_material?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    url: jdbc:mysql://192.168.150.100:3306/epidemic_pandemic?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
     username: root
     password: 123
     type: com.zaxxer.hikari.HikariDataSource
@@ -39,27 +16,9 @@ spring:
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
   type-aliases-package: com.epidemic.pandemic.entity
-  configuration:
-    map-underscore-to-camel-case: true
   global-config:
     db-config:
       id-type: auto
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
 
-knife4j:
-  enable: true
-  setting:
-    language: zh_cn
-  production: false
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-  api-docs:
-    path: /v3/api-docs
-
-logging:
-  level:
-    com.epidemic: debug
+server:
+  port: 8083

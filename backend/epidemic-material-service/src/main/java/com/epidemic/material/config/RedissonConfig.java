@@ -31,7 +31,7 @@ public class RedissonConfig {
     @Bean
     public RedissonClient redissonClient() {
         Config config = new Config();
-        
+
         // 配置单机模式
         String address = String.format("redis://%s:%d", redisHost, redisPort);
         config.useSingleServer()
@@ -39,7 +39,7 @@ public class RedissonConfig {
               .setDatabase(database)
               .setConnectionMinimumIdleSize(5)
               .setConnectionPoolSize(10);
-        
+
         // 如果有密码则设置密码
         if (redisPassword != null && !redisPassword.isEmpty()) {
             config.useSingleServer().setPassword(redisPassword);
@@ -47,7 +47,7 @@ public class RedissonConfig {
         } else {
             log.info("Redisson 配置：使用无密码连接 Redis {}:{}", redisHost, redisPort);
         }
-        
+
         return Redisson.create(config);
     }
 }

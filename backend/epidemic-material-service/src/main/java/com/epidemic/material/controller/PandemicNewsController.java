@@ -2,7 +2,7 @@ package com.epidemic.material.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
-import com.epidemic.material.entity.PandemicNews;
+import com.epidemic.common.entity.PandemicNews;
 import com.epidemic.material.service.PandemicNewsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

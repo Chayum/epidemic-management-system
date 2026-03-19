@@ -90,26 +90,6 @@
       </el-col>
       
       <el-col :xs="24" :lg="8">
-        <div class="card-container">
-          <div class="card-header">
-            <h3>库存预警</h3>
-            <el-badge :value="warningCount" type="warning">
-              <el-button type="primary" link>查看详情</el-button>
-            </el-badge>
-          </div>
-          <div class="warning-list">
-            <div v-for="item in warningList" :key="item.id" class="warning-item">
-              <div class="warning-icon" :class="item.level">
-                <el-icon><WarningFilled /></el-icon>
-              </div>
-              <div class="warning-info">
-                <div class="warning-name">{{ item.name }}</div>
-                <div class="warning-desc">库存: {{ item.stock }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
         <div class="card-container contact-section">
           <div class="card-header">
             <h3>联系我们</h3>
@@ -138,7 +118,7 @@
 import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
-import { getWarningList, getUserStats } from '@/api/stats'
+import { getUserStats } from '@/api/stats'
 import { getNewsList } from '@/api/pandemic'
 
 const currentDate = computed(() => dayjs().format('YYYY年MM月DD日'))
@@ -150,8 +130,6 @@ const stats = ref([
 ])
 
 const newsList = ref([])
-const warningList = ref([])
-const warningCount = ref(0)
 
 const fetchHomeData = async () => {
   try {
@@ -164,18 +142,7 @@ const fetchHomeData = async () => {
       stats.value[2].value = (data.myDonationCount || 0).toString()
     }
 
-    // 2. Get Warning List
-    const warningRes = await getWarningList()
-    if (warningRes.code === 200) {
-      const list = warningRes.data || []
-      warningList.value = list.map(item => ({
-        ...item,
-        level: item.warningLevel === 'high' ? 'warning' : 'normal'
-      }))
-      warningCount.value = list.length
-    }
-
-    // 3. Get News
+    // 2. Get News
     const newsRes = await getNewsList({ page: 1, size: 5, status: 'published' })
     if (newsRes.code === 200) {
       newsList.value = (newsRes.data.list || []).map(item => ({
@@ -382,56 +349,6 @@ onMounted(() => {
 .news-time {
   font-size: 12px;
   color: #8c8c8c;
-}
-
-.warning-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.warning-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #fafafa;
-  border-radius: 8px;
-}
-
-.warning-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  
-  &.warning {
-    background: #fffbe6;
-    color: #faad14;
-  }
-  
-  &.normal {
-    background: #e6f7ff;
-    color: #1890ff;
-  }
-}
-
-.warning-info {
-  flex: 1;
-}
-
-.warning-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1a1a1a;
-}
-
-.warning-desc {
-  font-size: 12px;
-  color: #8c8c8c;
-  margin-top: 2px;
 }
 
 .contact-section {

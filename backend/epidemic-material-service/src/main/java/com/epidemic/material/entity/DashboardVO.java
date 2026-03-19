@@ -53,42 +53,82 @@ public class DashboardVO implements Serializable {
          * 物资总量
          */
         private Long totalMaterials;
-        
+
+        /**
+         * 物资总量涨跌趋势百分比
+         */
+        private Integer totalMaterialsTrend;
+
+        /**
+         * 物资总量趋势类型（up/down）
+         */
+        private String totalMaterialsTrendType;
+
         /**
          * 可用库存总量
          */
         private Long totalStock;
-        
+
         /**
          * 今日入库量
          */
         private Integer todayInbound;
-        
+
+        /**
+         * 今日入库涨跌趋势百分比
+         */
+        private Integer todayInboundTrend;
+
+        /**
+         * 今日入库趋势类型（up/down）
+         */
+        private String todayInboundTrendType;
+
         /**
          * 今日出库量
          */
         private Integer todayOutbound;
-        
+
+        /**
+         * 今日出库涨跌趋势百分比
+         */
+        private Integer todayOutboundTrend;
+
+        /**
+         * 今日出库趋势类型（up/down）
+         */
+        private String todayOutboundTrendType;
+
         /**
          * 待审核申请数
          */
         private Long pendingApplications;
-        
+
         /**
          * 待审核捐赠数
          */
         private Long pendingDonations;
-        
+
         /**
          * 库存预警物资数
          */
         private Integer lowStockItems;
-        
+
+        /**
+         * 库存预警涨跌趋势百分比
+         */
+        private Integer lowStockItemsTrend;
+
+        /**
+         * 库存预警趋势类型（up/down）
+         */
+        private String lowStockItemsTrendType;
+
         /**
          * 累计捐赠总额
          */
         private Double totalDonationAmount;
-        
+
         /**
          * 累计受益人数
          */

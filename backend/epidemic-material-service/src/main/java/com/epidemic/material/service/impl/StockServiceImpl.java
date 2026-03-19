@@ -251,6 +251,11 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
                     order.getRemark()
             );
         }
+
+        // 清除物资统计和预警列表缓存，确保库存变更后预警实时更新
+        cacheService.deleteMaterialStats();
+        cacheService.deleteWarningList();
+        log.info("库存变动已处理，已清除相关缓存");
     }
 
     private void updateMaterialCost(String materialId, BigDecimal newPrice, Integer newQty, Integer oldQty) {

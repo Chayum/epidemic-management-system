@@ -5,7 +5,7 @@
     </div>
     
     <el-row :gutter="20" class="stat-row">
-      <el-col :xs="8" v-for="stat in stats" :key="stat.label">
+      <el-col :xs="24" :sm="8" v-for="stat in stats" :key="stat.label">
         <div class="stat-card" :style="{ background: stat.bgColor }">
           <div class="stat-icon-wrap" :style="{ background: stat.iconBg }">
             <el-icon :size="24" :color="stat.color"><component :is="stat.icon" /></el-icon>

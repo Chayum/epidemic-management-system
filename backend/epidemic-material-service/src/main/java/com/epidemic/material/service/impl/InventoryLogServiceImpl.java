@@ -36,29 +36,78 @@ public class InventoryLogServiceImpl extends ServiceImpl<InventoryLogMapper, Inv
             log.debug("从缓存获取今日出入库统计");
             return cachedStats;
         }
-        
+
         // 2. 缓存未命中，从数据库查询
-        Map<String, Integer> stats = new HashMap<>();
-        LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
-        
-        // 统计今日入库
-        List<InventoryLog> inboundLogs = list(new LambdaQueryWrapper<InventoryLog>()
-                .eq(InventoryLog::getChangeType, "inbound")
-                .ge(InventoryLog::getOperateTime, todayStart));
-        int inboundCount = inboundLogs.stream().mapToInt(InventoryLog::getChangeQuantity).sum();
-        stats.put("todayInbound", inboundCount);
-        
-        // 统计今日出库 (注意：出库记录的数量可能是负数，取决于记录逻辑，这里取绝对值)
-        List<InventoryLog> outboundLogs = list(new LambdaQueryWrapper<InventoryLog>()
-                .eq(InventoryLog::getChangeType, "outbound")
-                .ge(InventoryLog::getOperateTime, todayStart));
-        int outboundCount = outboundLogs.stream().mapToInt(l -> Math.abs(l.getChangeQuantity())).sum();
-        stats.put("todayOutbound", outboundCount);
-        
-        // 3. 存入缓存
+        Map<String, Integer> stats = queryStatsForDate(LocalDate.now());
         cacheService.setTodayStats(stats);
         log.info("今日出入库统计已缓存");
-        
+
+        return stats;
+    }
+
+    @Override
+    public Map<String, Integer> getYesterdayStats() {
+        return queryStatsForDate(LocalDate.now().minusDays(1));
+    }
+
+    @Override
+    public Map<String, Object> getStatsTrend() {
+        Map<String, Object> trend = new HashMap<>();
+        Map<String, Integer> todayStats = getTodayStats();
+        Map<String, Integer> yesterdayStats = getYesterdayStats();
+
+        int todayInbound = todayStats.getOrDefault("todayInbound", 0);
+        int yesterdayInbound = yesterdayStats.getOrDefault("todayInbound", 0);
+        int todayOutbound = todayStats.getOrDefault("todayOutbound", 0);
+        int yesterdayOutbound = yesterdayStats.getOrDefault("todayOutbound", 0);
+
+        // 计算入库趋势百分比
+        double inboundTrend = 0;
+        if (yesterdayInbound > 0) {
+            inboundTrend = Math.round(((double) (todayInbound - yesterdayInbound) / yesterdayInbound) * 100);
+        } else if (todayInbound > 0) {
+            inboundTrend = 100; // 昨天为0今天有数据，视为增长100%
+        }
+        trend.put("inboundTrend", inboundTrend);
+        trend.put("inboundTrendType", inboundTrend >= 0 ? "up" : "down");
+
+        // 计算出库趋势百分比
+        double outboundTrend = 0;
+        if (yesterdayOutbound > 0) {
+            outboundTrend = Math.round(((double) (todayOutbound - yesterdayOutbound) / yesterdayOutbound) * 100);
+        } else if (todayOutbound > 0) {
+            outboundTrend = 100;
+        }
+        trend.put("outboundTrend", outboundTrend);
+        trend.put("outboundTrendType", outboundTrend >= 0 ? "up" : "down");
+
+        return trend;
+    }
+
+    /**
+     * 查询指定日期的出入库统计
+     */
+    private Map<String, Integer> queryStatsForDate(LocalDate date) {
+        Map<String, Integer> stats = new HashMap<>();
+        LocalDateTime dayStart = LocalDateTime.of(date, LocalTime.MIN);
+        LocalDateTime dayEnd = LocalDateTime.of(date, LocalTime.MAX);
+
+        // 统计入库
+        List<InventoryLog> inboundLogs = list(new LambdaQueryWrapper<InventoryLog>()
+                .eq(InventoryLog::getChangeType, "inbound")
+                .ge(InventoryLog::getOperateTime, dayStart)
+                .le(InventoryLog::getOperateTime, dayEnd));
+        int inboundCount = inboundLogs.stream().mapToInt(InventoryLog::getChangeQuantity).sum();
+        stats.put("todayInbound", inboundCount);
+
+        // 统计出库
+        List<InventoryLog> outboundLogs = list(new LambdaQueryWrapper<InventoryLog>()
+                .eq(InventoryLog::getChangeType, "outbound")
+                .ge(InventoryLog::getOperateTime, dayStart)
+                .le(InventoryLog::getOperateTime, dayEnd));
+        int outboundCount = outboundLogs.stream().mapToInt(l -> Math.abs(l.getChangeQuantity())).sum();
+        stats.put("todayOutbound", outboundCount);
+
         return stats;
     }
 

@@ -180,7 +180,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import * as echarts from 'echarts'
 import dayjs from 'dayjs'
-import { getDashboardData, getTrendData, getMaterialStats } from '@/api/stats'
+import { getDashboardData, getTrendData, getMaterialStats, getWarningList } from '@/api/stats'
 import { getApplicationList } from '@/api/application'
 import {
   Plus, Box, Refresh, ArrowUp, ArrowDown, ArrowRight,
@@ -205,6 +205,7 @@ const loading = ref(false)
 let trendChart = null
 let pieChart = null
 let refreshTimer = null
+let warningTimer = null
 
 // 统计卡片数据
 const stats = ref([
@@ -229,14 +230,23 @@ const loadDashboardData = async () => {
     const res = await getDashboardData()
     if (res.code === 200) {
       const data = res.data
+      const core = data.coreMetrics || {}
 
       // 更新统计卡片
-      if (data.coreMetrics) {
-        stats.value[0].value = (data.coreMetrics.totalMaterials || 0).toLocaleString()
-        stats.value[1].value = (data.coreMetrics.todayInbound || 0).toLocaleString()
-        stats.value[2].value = (data.coreMetrics.todayOutbound || 0).toLocaleString()
-        stats.value[3].value = (data.coreMetrics.lowStockItems || 0).toString()
-      }
+      stats.value[0].value = (core.totalMaterials || 0).toLocaleString()
+      stats.value[1].value = (core.todayInbound || 0).toLocaleString()
+      stats.value[2].value = (core.todayOutbound || 0).toLocaleString()
+      stats.value[3].value = (core.lowStockItems || 0).toString()
+
+      // 更新趋势数据
+      stats.value[0].trend = core.totalMaterialsTrend ?? 0
+      stats.value[0].trendType = core.totalMaterialsTrendType ?? 'up'
+      stats.value[1].trend = core.todayInboundTrend ?? 0
+      stats.value[1].trendType = core.todayInboundTrendType ?? 'up'
+      stats.value[2].trend = core.todayOutboundTrend ?? 0
+      stats.value[2].trendType = core.todayOutboundTrendType ?? 'up'
+      stats.value[3].trend = core.lowStockItemsTrend ?? 0
+      stats.value[3].trendType = core.lowStockItemsTrendType ?? 'down'
 
       // 更新预警列表
       warningList.value = data.warningList || []
@@ -269,6 +279,20 @@ const loadDashboardData = async () => {
     }
   } catch (error) {
     console.error('获取待审核申请失败:', error)
+  }
+}
+
+/**
+ * 单独加载库存预警列表（高频刷新，每10秒）
+ */
+const loadWarningList = async () => {
+  try {
+    const res = await getWarningList()
+    if (res.code === 200) {
+      warningList.value = res.data || []
+    }
+  } catch (error) {
+    console.error('获取库存预警列表失败:', error)
   }
 }
 
@@ -503,8 +527,11 @@ onMounted(() => {
   initTrendChart()
   initPieChart()
 
-  // 30 秒自动刷新
+  // 30 秒自动刷新整体数据
   refreshTimer = setInterval(loadDashboardData, 30000)
+
+  // 10 秒高频刷新库存预警
+  warningTimer = setInterval(loadWarningList, 10000)
 
   // 监听窗口大小
   window.addEventListener('resize', handleResize)
@@ -515,6 +542,10 @@ onUnmounted(() => {
   if (refreshTimer) {
     clearInterval(refreshTimer)
     refreshTimer = null
+  }
+  if (warningTimer) {
+    clearInterval(warningTimer)
+    warningTimer = null
   }
   // 销毁图表实例
   if (trendChart) {

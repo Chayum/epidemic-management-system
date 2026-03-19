@@ -1,18 +1,9 @@
-server:
-  port: 8080
-
 spring:
   application:
     name: epidemic-gateway
+  config:
+    import: optional:classpath:common-config.yml
   cloud:
-    nacos:
-      discovery:
-        server-addr: 192.168.150.100:8848
-      config:
-        server-addr: 192.168.150.100:8848
-        file-extension: yaml
-        import-check:
-          enabled: false
     gateway:
       discovery:
         locator:
@@ -51,19 +42,9 @@ spring:
             - Path=/api/pandemic/**, /api/notification/**
           filters:
             - StripPrefix=1
-  data:
-    redis:
-          host: 192.168.150.100
-          port: 6379
-          password:
-          database: 0
-          timeout: 5000ms
-          lettuce:
-            pool:
-              max-active: 8
-              max-idle: 8
-              min-idle: 0
-              max-wait: -1ms
+
+server:
+  port: 8080
 
 jwt:
   secret: epidemic-material-management-secret-key-2024-super-secret
@@ -77,21 +58,3 @@ auth:
     - /swagger-ui.html
     - /webjars/**
     - /v3/api-docs/**
-
-#      globalcors:
-#        cors-configurations:
-#          '[/**]':
-#            allowedOrigins: "*"
-#            allowedMethods:
-#              - GET
-#              - POST
-#              - PUT
-#              - DELETE
-#              - OPTIONS
-#            allowedHeaders: "*"
-#            allowCredentials: true
-#            maxAge: 3600
-
-logging:
-  level:
-    com.epidemic: info

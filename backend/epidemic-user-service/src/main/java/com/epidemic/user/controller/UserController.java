@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户管理控制器
@@ -125,5 +126,24 @@ public class UserController {
         List<Long> ids = (List<Long>) params.get("ids");
         userService.batchDelete(ids);
         return Result.success("批量删除成功");
+    }
+
+    /**
+     * 获取用户角色统计
+     * @return 各角色用户数量
+     */
+    @GetMapping("/stats/role-counts")
+    public Result<List<Map<String, Object>>> getRoleCounts() {
+        return Result.success(userService.getRoleCounts());
+    }
+
+    /**
+     * 根据角色获取用户ID列表
+     * @param role 角色（可选，为空则返回除admin外的所有用户ID）
+     * @return 用户ID列表
+     */
+    @GetMapping("/ids/by-role")
+    public Result<List<Long>> getUserIdsByRole(@RequestParam(required = false) String role) {
+        return Result.success(userService.getUserIdsByRole(role));
     }
 }

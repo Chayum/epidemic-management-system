@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.common.result.PageResult;
+import com.epidemic.common.result.Result;
 import com.epidemic.pandemic.entity.PandemicNews;
 import com.epidemic.pandemic.entity.PushRecord;
+import com.epidemic.pandemic.feign.UserFeignClient;
 import com.epidemic.pandemic.mapper.PandemicNewsMapper;
 import com.epidemic.pandemic.mapper.PushRecordMapper;
 import com.epidemic.pandemic.service.PandemicCacheService;
@@ -13,7 +15,6 @@ import com.epidemic.pandemic.service.PandemicService;
 import com.epidemic.pandemic.service.UserNotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -36,13 +37,13 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
     private PushRecordMapper pushRecordMapper;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @Autowired
     private PandemicCacheService cacheService;
 
     @Autowired
     private UserNotificationService userNotificationService;
+
+    @Autowired
+    private UserFeignClient userFeignClient;
 
     @Override
     public PageResult<PandemicNews> getNewsList(Integer page, Integer size, String status) {
@@ -289,32 +290,17 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
      * @return 用户ID列表
      */
     private List<Long> getUserIdsByTarget(String target) {
-        List<Long> userIds = new ArrayList<>();
         log.info("获取推送目标用户: target={}", target);
+        Result<List<Long>> result;
         if (target == null || "all".equals(target)) {
             // 推送给所有用户（排除管理员）
-            String sql = "SELECT id FROM `sys_user` WHERE status = 'active' AND role != 'admin'";
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
-            log.info("查询所有用户，结果数量: {}", results.size());
-            for (Map<String, Object> row : results) {
-                Object id = row.get("id");
-                if (id instanceof Number) {
-                    userIds.add(((Number) id).longValue());
-                }
-            }
+            result = userFeignClient.getUserIdsByRole(null);
         } else {
             // 推送给指定角色的用户
-            String sql = "SELECT id FROM `sys_user` WHERE status = 'active' AND role = ?";
-            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, target);
-            log.info("查询角色用户: role={}, 结果数量: {}", target, results.size());
-            for (Map<String, Object> row : results) {
-                Object id = row.get("id");
-                if (id instanceof Number) {
-                    userIds.add(((Number) id).longValue());
-                }
-            }
+            result = userFeignClient.getUserIdsByRole(target);
         }
-        log.info("最终获取到的用户ID列表: {}", userIds);
+        List<Long> userIds = (result != null && result.getData() != null) ? result.getData() : new ArrayList<>();
+        log.info("获取到的用户ID列表: {}", userIds);
         return userIds;
     }
 
@@ -327,8 +313,11 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
             return cachedStats;
         }
 
-        String sql = "SELECT role, COUNT(*) as count FROM `sys_user` WHERE status = 'active' GROUP BY role";
-        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql);
+        // 调用 user-service 获取数据
+        Result<List<Map<String, Object>>> result = userFeignClient.getRoleCounts();
+        List<Map<String, Object>> results = (result != null && result.getData() != null)
+            ? result.getData()
+            : new ArrayList<>();
 
         List<Map<String, Object>> list = new ArrayList<>();
         Map<String, String> roleNameMap = new HashMap<>();

@@ -1,13 +1,12 @@
 package com.epidemic.material.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.epidemic.common.result.PageResult;
-import com.epidemic.material.entity.PandemicNews;
+import com.epidemic.common.entity.PandemicNews;
 
 /**
  * 疫情新闻服务接口
  */
-public interface PandemicNewsService extends IService<PandemicNews> {
+public interface PandemicNewsService {
 
     /**
      * 获取新闻列表
@@ -17,4 +16,11 @@ public interface PandemicNewsService extends IService<PandemicNews> {
      * @return 分页结果
      */
     PageResult<PandemicNews> getNewsList(Integer page, Integer size, String status);
+
+    /**
+     * 获取新闻详情
+     * @param id 新闻ID
+     * @return 新闻详情
+     */
+    PandemicNews getById(String id);
 }

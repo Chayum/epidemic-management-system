@@ -82,13 +82,28 @@ public class JwtUtil {
      * 判断token是否过期
      */
     public Boolean isTokenExpired(String token) {
-        Claims claims = getClaimsFromToken(token);
-        Date expiration = claims.getExpiration();
-        return expiration.before(new Date());
+        try {
+            Claims claims = getClaimsFromToken(token);
+            Date expiration = claims.getExpiration();
+            return expiration.before(new Date());
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     /**
-     * 验证token是否有效
+     * 验证token是否有效（只检查过期）
+     */
+    public Boolean validateToken(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 验证token是否有效（检查用户名和过期）
      */
     public Boolean validateToken(String token, String username) {
         String tokenUsername = getUsernameFromToken(token);

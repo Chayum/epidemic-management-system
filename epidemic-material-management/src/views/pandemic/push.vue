@@ -22,19 +22,19 @@
     </el-row>
     
     <el-row :gutter="20">
-      <el-col :xs="24" :lg="12">
+      <el-col :xs="24" :lg="16">
         <div class="card-container">
           <h3 class="section-title">推送记录</h3>
-          <el-table :data="pushRecords" style="width: 100%">
-            <el-table-column prop="title" label="推送标题" min-width="150" />
-            <el-table-column prop="target" label="推送对象" width="120" />
-            <el-table-column prop="channel" label="推送渠道" width="100">
+          <el-table :data="pushRecords" style="width: 100%" :scroll-x="true">
+            <el-table-column prop="title" label="推送标题" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="target" label="推送对象" min-width="120" show-overflow-tooltip />
+            <el-table-column prop="channel" label="推送渠道" min-width="100" show-overflow-tooltip>
               <template #default="{ row }">
                 <el-tag v-for="ch in row.channelList" :key="ch" size="small" style="margin-right: 4px">{{ ch }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="time" label="推送时间" width="160" />
-            <el-table-column prop="status" label="状态" width="80">
+            <el-table-column prop="time" label="推送时间" min-width="160" show-overflow-tooltip />
+            <el-table-column prop="status" label="状态" min-width="80" show-overflow-tooltip>
               <template #default="{ row }">
                 <el-tag :type="row.status === '成功' ? 'success' : 'danger'" size="small">{{ row.status }}</el-tag>
               </template>
@@ -48,7 +48,7 @@
         </div>
       </el-col>
       
-      <el-col :xs="24" :lg="12">
+      <el-col :xs="24" :lg="8">
         <div class="card-container">
           <h3 class="section-title">用户角色分布</h3>
           <div class="chart-container" ref="roleChartRef"></div>
@@ -168,12 +168,12 @@ const initRoleChart = (data) => {
   const chartData = data || roleChartData.value
   const option = {
     tooltip: { trigger: 'item', formatter: '{b}: {c}人 ({d}%)' },
-    legend: { orient: 'vertical', right: 10, top: 'center' },
+    legend: { orient: 'horizontal', bottom: 0, left: 'center' },
     series: [
       {
         type: 'pie',
         radius: ['40%', '70%'],
-        center: ['35%', '50%'],
+        center: ['50%', '45%'],
         avoidLabelOverlap: false,
         itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
         label: { show: false },
@@ -306,6 +306,6 @@ onMounted(() => {
 }
 
 .chart-container {
-  height: 280px;
+  height: 320px;
 }
 </style>

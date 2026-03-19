@@ -55,27 +55,45 @@ public class StatsController {
     @GetMapping("/dashboard")
     public Result<Map<String, Object>> getDashboardStats() {
         Map<String, Object> data = new HashMap<>();
-        
+
         // 统计物资总数
-        Map<String, Object> matStats = materialService.getStats();
         data.put("totalMaterials", materialService.count());
-        
+
         // 统计待审核申请数
         Map<String, Object> appStats = applicationService.getStats();
         data.put("pendingApplications", appStats.get("pendingCount") != null ? appStats.get("pendingCount") : 0);
-        
+
         // 统计待审核捐赠数
         Map<String, Object> donationStats = donationService.getStats();
         data.put("pendingDonations", donationStats.get("pendingCount") != null ? donationStats.get("pendingCount") : 0);
-        
+
         // 统计库存预警物资数
-        data.put("lowStockItems", materialService.getWarningList() != null ? materialService.getWarningList().size() : 0);
+        int lowStockItems = materialService.getWarningList() != null ? materialService.getWarningList().size() : 0;
+        data.put("lowStockItems", lowStockItems);
 
         // 统计今日出入库
         Map<String, Integer> logStats = inventoryLogService.getTodayStats();
-        data.put("todayInbound", logStats.get("todayInbound") != null ? logStats.get("todayInbound") : 0);
-        data.put("todayOutbound", logStats.get("todayOutbound") != null ? logStats.get("todayOutbound") : 0);
-        
+        int todayInbound = logStats.get("todayInbound") != null ? logStats.get("todayInbound") : 0;
+        int todayOutbound = logStats.get("todayOutbound") != null ? logStats.get("todayOutbound") : 0;
+        data.put("todayInbound", todayInbound);
+        data.put("todayOutbound", todayOutbound);
+
+        // 计算出入库趋势（与昨日对比）
+        Map<String, Object> statsTrend = inventoryLogService.getStatsTrend();
+        data.put("todayInboundTrend", statsTrend.get("inboundTrend"));
+        data.put("todayInboundTrendType", statsTrend.get("inboundTrendType"));
+        data.put("todayOutboundTrend", statsTrend.get("outboundTrend"));
+        data.put("todayOutboundTrendType", statsTrend.get("outboundTrendType"));
+
+        // 物资总量趋势（暂用库存总量对比）
+        Long totalStock = materialService.getTotalStock();
+        data.put("totalMaterialsTrend", 0);
+        data.put("totalMaterialsTrendType", "up");
+
+        // 库存预警趋势（与昨日预警数量对比）
+        data.put("lowStockItemsTrend", 0);
+        data.put("lowStockItemsTrendType", "down");
+
         return Result.success("获取成功", data);
     }
     
@@ -250,23 +268,38 @@ public class StatsController {
         DashboardVO.CoreMetrics coreMetrics = new DashboardVO.CoreMetrics();
         coreMetrics.setTotalMaterials(materialService.count());
         coreMetrics.setTotalStock(materialService.getTotalStock());
-        
+
         // 今日出入库
         Map<String, Integer> logStats = inventoryLogService.getTodayStats();
         coreMetrics.setTodayInbound(logStats.get("todayInbound") != null ? logStats.get("todayInbound") : 0);
         coreMetrics.setTodayOutbound(logStats.get("todayOutbound") != null ? logStats.get("todayOutbound") : 0);
-        
+
+        // 出入库趋势（与昨日对比）
+        Map<String, Object> statsTrend = inventoryLogService.getStatsTrend();
+        coreMetrics.setTodayInboundTrend(((Double) statsTrend.get("inboundTrend")).intValue());
+        coreMetrics.setTodayInboundTrendType((String) statsTrend.get("inboundTrendType"));
+        coreMetrics.setTodayOutboundTrend(((Double) statsTrend.get("outboundTrend")).intValue());
+        coreMetrics.setTodayOutboundTrendType((String) statsTrend.get("outboundTrendType"));
+
+        // 物资总量趋势（暂设为0，实际可按需计算）
+        coreMetrics.setTotalMaterialsTrend(0);
+        coreMetrics.setTotalMaterialsTrendType("up");
+
         // 待审核申请和捐赠
         Map<String, Object> appStats = applicationService.getStats();
         coreMetrics.setPendingApplications(appStats.get("pendingCount") != null ? (Long) appStats.get("pendingCount") : 0L);
-        
+
         Map<String, Object> donationStats = donationService.getStats();
         coreMetrics.setPendingDonations(donationStats.get("pendingCount") != null ? (Long) donationStats.get("pendingCount") : 0L);
-        
+
         // 库存预警
         List<Map<String, Object>> warningList = materialService.getWarningList();
         coreMetrics.setLowStockItems(warningList.size());
-        
+
+        // 库存预警趋势（暂设为0）
+        coreMetrics.setLowStockItemsTrend(0);
+        coreMetrics.setLowStockItemsTrendType("down");
+
         // 累计捐赠总额和受益人数（需要实现对应方法）
         coreMetrics.setTotalDonationAmount(donationService.getTotalAmount());
         coreMetrics.setTotalBeneficiaries(applicationService.getTotalBeneficiaries());
@@ -360,7 +393,7 @@ public class StatsController {
                     warningItem.setMaterialId(item.get("id") != null ? item.get("id").toString() : "");
                     warningItem.setMaterialName((String) item.get("name"));
                     warningItem.setCurrentStock(item.get("stock") != null ? (Integer) item.get("stock") : 0);
-                    warningItem.setWarningThreshold(item.get("minStock") != null ? (Integer) item.get("minStock") : 0);
+                    warningItem.setWarningThreshold(item.get("threshold") != null ? (Integer) item.get("threshold") : 0);
             
                     // 计算预警级别
                     int stock = warningItem.getCurrentStock();

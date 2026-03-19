@@ -1,8 +1,5 @@
-package com.epidemic.material.entity;
+package com.epidemic.common.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -10,14 +7,13 @@ import java.time.LocalDateTime;
 
 /**
  * 疫情新闻实体类
+ * 用于在各服务间通过 Feign 传递数据
  */
 @Data
-@TableName("pandemic_news")
 public class PandemicNews implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private String id;
 
     private String title;
