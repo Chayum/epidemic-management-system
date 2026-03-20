@@ -3,6 +3,7 @@ package com.epidemic.material.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.material.annotation.OperateLog;
 import com.epidemic.material.dto.StockOrderDTO;
 import com.epidemic.material.entity.InventoryLog;
 import com.epidemic.material.entity.StockOrder;
@@ -42,6 +43,7 @@ public class StockController {
 
     @Operation(summary = "创建出入库单")
     @PostMapping("/order")
+    @OperateLog(module = "出入库", operation = "创建单据")
     public Result<String> createOrder(@Valid @RequestBody StockOrderDTO dto,
                                       @RequestHeader("X-User-Id") String userId,
                                       @RequestHeader("X-User-Name") String username) {
@@ -51,6 +53,7 @@ public class StockController {
 
     @Operation(summary = "审核单据")
     @PostMapping("/order/{id}/audit")
+    @OperateLog(module = "出入库", operation = "审核单据")
     public Result<String> auditOrder(@PathVariable String id,
                                      @RequestParam boolean approved,
                                      @RequestParam(required = false) String remark,
@@ -62,6 +65,7 @@ public class StockController {
 
     @Operation(summary = "作废单据")
     @PostMapping("/order/{id}/void")
+    @OperateLog(module = "出入库", operation = "作废单据")
     public Result<String> voidOrder(@PathVariable String id,
                                     @RequestHeader("X-User-Id") String userId) {
         stockService.voidOrder(id, Long.valueOf(userId));

@@ -2,6 +2,7 @@ package com.epidemic.material.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.material.annotation.OperateLog;
 import com.epidemic.material.service.MaterialService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,6 +41,7 @@ public class InventoryController {
 
     @Operation(summary = "盘点库存")
     @PostMapping("/check")
+    @OperateLog(module = "库存管理", operation = "盘点库存")
     public Result<String> checkInventory(@RequestBody Map<String, Object> params) {
         String inventoryId = (String) params.get("inventoryId");
         Integer actualStock = (Integer) params.get("actualStock");

@@ -8,7 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @SpringBootApplication(scanBasePackages = {"com.epidemic.material", "com.epidemic.common"})
 @EnableDiscoveryClient
-@EnableFeignClients
+@EnableFeignClients(basePackages = {"com.epidemic.common.feign", "com.epidemic.material.feign"})
 @MapperScan("com.epidemic.material.mapper")
 public class MaterialApplication {
 

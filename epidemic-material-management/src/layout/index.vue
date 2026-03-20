@@ -85,13 +85,6 @@
         </div>
         
         <div class="header-right">
-          <!-- 通知图标 -->
-          <div class="header-action">
-            <el-badge :value="3" :max="99" class="notification-badge">
-              <el-icon :size="20"><Bell /></el-icon>
-            </el-badge>
-          </div>
-          
           <!-- 用户下拉菜单 -->
           <el-dropdown @command="handleCommand" trigger="click">
             <div class="user-info">
@@ -142,9 +135,9 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { 
-  FirstAidKit, Monitor, User, Box, DataAnalysis, 
-  ArrowDown, Setting, SwitchButton, Bell, DArrowLeft 
+import {
+  FirstAidKit, Monitor, User, Box, DataAnalysis,
+  ArrowDown, Setting, SwitchButton, DArrowLeft
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

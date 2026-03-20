@@ -6,13 +6,14 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import com.epidemic.pandemic.entity.PandemicNews;
+import com.epidemic.pandemic.entity.PushMessage;
 import com.epidemic.pandemic.entity.PushRecord;
 import com.epidemic.pandemic.feign.UserFeignClient;
+import com.epidemic.pandemic.producer.PushMessageProducer;
 import com.epidemic.pandemic.mapper.PandemicNewsMapper;
 import com.epidemic.pandemic.mapper.PushRecordMapper;
 import com.epidemic.pandemic.service.PandemicCacheService;
 import com.epidemic.pandemic.service.PandemicService;
-import com.epidemic.pandemic.service.UserNotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,10 +41,10 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
     private PandemicCacheService cacheService;
 
     @Autowired
-    private UserNotificationService userNotificationService;
+    private UserFeignClient userFeignClient;
 
     @Autowired
-    private UserFeignClient userFeignClient;
+    private PushMessageProducer pushMessageProducer;
 
     @Override
     public PageResult<PandemicNews> getNewsList(Integer page, Integer size, String status) {
@@ -265,43 +266,23 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
 
         pushRecordMapper.insert(record);
 
-        // 为目标用户创建通知
-        String target = (String) pushData.get("target");
-        List<Long> userIds = getUserIdsByTarget(target);
-        if (!userIds.isEmpty()) {
-            userNotificationService.createNotifications(
-                userIds,
-                record.getTitle(),
-                record.getContent(),
-                "push",
-                record.getId()
-            );
-        }
+        // 发送消息到 MQ，由消费者异步处理通知发送
+        PushMessage pushMessage = PushMessage.builder()
+                .pushRecordId(record.getId())
+                .title(record.getTitle())
+                .content(record.getContent())
+                .target(record.getTarget())
+                .channels(record.getChannels())
+                .pushTime(record.getPushTime())
+                .createTime(record.getCreateTime())
+                .build();
+
+        pushMessageProducer.sendPushMessage(pushMessage);
 
         // 清除推送相关缓存
         cacheService.deletePushStatsCache();
         cacheService.deletePushListCache();
-        log.info("推送消息后清除相关缓存");
-    }
-
-    /**
-     * 根据推送目标获取用户ID列表
-     * @param target 推送目标
-     * @return 用户ID列表
-     */
-    private List<Long> getUserIdsByTarget(String target) {
-        log.info("获取推送目标用户: target={}", target);
-        Result<List<Long>> result;
-        if (target == null || "all".equals(target)) {
-            // 推送给所有用户（排除管理员）
-            result = userFeignClient.getUserIdsByRole(null);
-        } else {
-            // 推送给指定角色的用户
-            result = userFeignClient.getUserIdsByRole(target);
-        }
-        List<Long> userIds = (result != null && result.getData() != null) ? result.getData() : new ArrayList<>();
-        log.info("获取到的用户ID列表: {}", userIds);
-        return userIds;
+        log.info("推送消息已发送到队列，等待异步处理");
     }
 
     @Override

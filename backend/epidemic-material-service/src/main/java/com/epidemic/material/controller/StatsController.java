@@ -1,6 +1,8 @@
 package com.epidemic.material.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.epidemic.common.entity.OperateLog;
+import com.epidemic.common.feign.LogFeignClient;
 import com.epidemic.common.result.Result;
 import com.epidemic.material.entity.Application;
 import com.epidemic.material.entity.DashboardVO;
@@ -44,6 +46,9 @@ public class StatsController {
 
     @Autowired
     private InventoryLogService inventoryLogService;
+
+    @Autowired
+    private LogFeignClient logFeignClient;
 
     /**
      * 获取管理端仪表盘综合统计数据
@@ -320,7 +325,10 @@ public class StatsController {
         
         // 6. 实时动态
         dashboard.setRealtimeActivities(buildRealtimeActivities());
-        
+
+        // 7. 近期操作日志
+        dashboard.setOperationLogs(buildOperationLogs());
+
         return Result.success(dashboard);
     }
     
@@ -468,7 +476,35 @@ public class StatsController {
         
         // 按时间排序并取最新 10 条
         result.sort((a, b) -> b.getCreateTime().compareTo(a.getCreateTime()));
-        
+
         return result.size() > 10 ? result.subList(0, 10) : result;
+    }
+
+    /**
+     * 构建近期操作日志列表
+     */
+    private List<DashboardVO.OperateLogVO> buildOperationLogs() {
+        List<DashboardVO.OperateLogVO> result = new ArrayList<>();
+
+        try {
+            // 通过 Feign 获取最新的 10 条操作日志
+            Result<List<OperateLog>> response = logFeignClient.getRecentLogs(10);
+            if (response.getCode() == 200 && response.getData() != null) {
+                for (OperateLog log : response.getData()) {
+                    DashboardVO.OperateLogVO vo = new DashboardVO.OperateLogVO();
+                    vo.setTime(log.getOperateTime() != null ? log.getOperateTime().toString() : "");
+                    vo.setUser(log.getUsername());
+                    vo.setAction(log.getOperation());
+                    vo.setDetail(log.getMethod() + (log.getParams() != null ? " - " + log.getParams() : ""));
+                    vo.setIp(log.getIp());
+                    result.add(vo);
+                }
+            }
+        } catch (Exception e) {
+            // 日志服务不可用时返回空列表
+            System.err.println("获取操作日志失败: " + e.getMessage());
+        }
+
+        return result;
     }
 }

@@ -35,6 +35,7 @@
         <module>epidemic-user-service</module>
         <module>epidemic-material-service</module>
         <module>epidemic-pandemic-service</module>
+        <module>epidemic-log-service</module>
         <module>epidemic-gateway</module>
     </modules>
 

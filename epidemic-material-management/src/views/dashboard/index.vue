@@ -71,7 +71,7 @@
     </el-row>
     
     <!-- 信息面板：待审核申请 + 库存预警 + 实时动态 -->
-    <el-row :gutter="20" class="chart-row">
+    <el-row :gutter="20" class="chart-row info-panels-row">
       <!-- 待审核申请 -->
       <el-col :xs="24" :lg="8">
         <div class="card-container info-panel">
@@ -161,7 +161,9 @@
         <div class="card-container">
           <div class="card-header">
             <h3>近期操作日志</h3>
-            <el-button type="primary" link>查看全部</el-button>
+            <el-button type="primary" link @click="$router.push('/log/list')">
+              查看全部 <el-icon><ArrowRight /></el-icon>
+            </el-button>
           </div>
           <el-table :data="operationLogs" style="width: 100%">
             <el-table-column prop="time" label="时间" width="180" />
@@ -253,6 +255,15 @@ const loadDashboardData = async () => {
 
       // 更新实时动态
       activities.value = data.realtimeActivities || []
+
+      // 更新操作日志
+      operationLogs.value = (data.operationLogs || []).map(log => ({
+        time: log.time ? dayjs(log.time).format('YYYY-MM-DD HH:mm:ss') : '',
+        user: log.user || '系统',
+        action: log.action || '',
+        detail: log.detail || '',
+        ip: log.ip || ''
+      }))
 
       // 更新趋势图
       if (data.trendData) {
@@ -724,15 +735,16 @@ onUnmounted(() => {
 
 /* ==================== 信息面板 ==================== */
 .info-panel {
-  min-height: 400px;
+  height: 420px;
   display: flex;
   flex-direction: column;
-  
+
   .el-table,
   .warning-list,
   .activity-list {
     flex: 1;
     overflow-y: auto;
+    max-height: 340px;
   }
 }
 

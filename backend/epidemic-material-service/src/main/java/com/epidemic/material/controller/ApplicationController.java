@@ -2,6 +2,7 @@ package com.epidemic.material.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.material.annotation.OperateLog;
 import com.epidemic.material.dto.ApplicationApproveDTO;
 import com.epidemic.material.dto.ApplicationQueryDTO;
 import com.epidemic.material.dto.ApplicationSubmitDTO;
@@ -71,6 +72,7 @@ public class ApplicationController {
      */
     @Operation(summary = "提交物资申请")
     @PostMapping
+    @OperateLog(module = "物资申请", operation = "提交申请")
     public Result<String> submit(@Validated @RequestBody ApplicationSubmitDTO submitDTO, 
                                  @RequestHeader("X-User-Id") String userIdStr,
                                  @RequestHeader(value = "X-User-Name", required = false) String username) {
@@ -95,6 +97,7 @@ public class ApplicationController {
      */
     @Operation(summary = "审核申请")
     @PostMapping("/approve")
+    @OperateLog(module = "物资申请", operation = "审核申请")
     public Result<String> approve(@Validated @RequestBody ApplicationApproveDTO approveDTO, 
                                   @RequestHeader("X-User-Id") String userIdStr,
                                   @RequestHeader(value = "X-User-Name", required = false) String username) {
@@ -118,6 +121,7 @@ public class ApplicationController {
      */
     @Operation(summary = "取消申请")
     @PostMapping("/{id}/cancel")
+    @OperateLog(module = "物资申请", operation = "取消申请")
     public Result<String> cancel(@PathVariable String id, @RequestHeader("X-User-Id") String userIdStr) {
         if (userIdStr == null) {
              return Result.error(401, "用户未登录");

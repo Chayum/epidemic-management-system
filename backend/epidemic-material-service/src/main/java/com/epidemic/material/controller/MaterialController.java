@@ -2,6 +2,7 @@ package com.epidemic.material.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.material.annotation.OperateLog;
 import com.epidemic.material.entity.Material;
 import com.epidemic.material.service.MaterialService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -83,6 +84,7 @@ public class MaterialController {
      */
     @Operation(summary = "新增物资")
     @PostMapping
+    @OperateLog(module = "物资管理", operation = "新增物资")
     public Result<String> addMaterial(@RequestBody Material material) {
         materialService.addMaterial(material);
         return Result.success("新增成功");
@@ -95,6 +97,7 @@ public class MaterialController {
      */
     @Operation(summary = "更新物资")
     @PutMapping
+    @OperateLog(module = "物资管理", operation = "更新物资")
     public Result<String> updateMaterial(@RequestBody Material material) {
         materialService.updateMaterial(material);
         return Result.success("更新成功");
@@ -107,6 +110,7 @@ public class MaterialController {
      */
     @Operation(summary = "删除物资")
     @DeleteMapping("/{id}")
+    @OperateLog(module = "物资管理", operation = "删除物资")
     public Result<String> deleteMaterial(@PathVariable String id) {
         materialService.removeById(id);
         return Result.success("删除成功");

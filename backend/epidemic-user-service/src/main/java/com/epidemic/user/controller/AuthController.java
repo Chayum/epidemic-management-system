@@ -2,6 +2,7 @@ package com.epidemic.user.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.epidemic.common.result.Result;
+import com.epidemic.user.annotation.OperateLog;
 import com.epidemic.user.dto.LoginRequest;
 import com.epidemic.user.entity.User;
 import com.epidemic.user.service.UserService;
@@ -47,6 +48,7 @@ public class AuthController {
      */
     @Operation(summary = "用户登录")
     @PostMapping("/login")
+    @OperateLog(module = "认证管理", operation = "用户登录")
     public Result<User> login(@Valid @RequestBody LoginRequest loginRequest) {
         String username = loginRequest.getUsername();
         
@@ -166,6 +168,7 @@ public class AuthController {
      */
     @Operation(summary = "用户登出")
     @PostMapping("/logout")
+    @OperateLog(module = "认证管理", operation = "用户登出")
     public Result<String> logout() {
         return Result.success("登出成功");
     }
@@ -201,6 +204,7 @@ public class AuthController {
      */
     @Operation(summary = "修改密码")
     @PutMapping("/password")
+    @OperateLog(module = "认证管理", operation = "修改密码")
     public Result<String> changePassword(@RequestHeader("X-User-Id") String userIdStr, 
                                          @RequestBody Map<String, String> params) {
         if (userIdStr == null) {
@@ -245,6 +249,7 @@ public class AuthController {
      */
     @Operation(summary = "更新用户信息")
     @PutMapping("/profile")
+    @OperateLog(module = "认证管理", operation = "更新个人资料")
     public Result<String> updateProfile(@RequestHeader("X-User-Id") String userIdStr, @RequestBody User updateUser) {
         if (userIdStr == null) {
              return Result.error(401, "用户未登录");

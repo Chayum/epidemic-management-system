@@ -2,6 +2,7 @@ package com.epidemic.pandemic.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.pandemic.annotation.OperateLog;
 import com.epidemic.pandemic.entity.PandemicNews;
 import com.epidemic.pandemic.service.PandemicService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,6 +42,7 @@ public class PandemicController {
 
     @Operation(summary = "发布新闻")
     @PostMapping("/news")
+    @OperateLog(module = "疫情新闻", operation = "发布新闻")
     public Result<String> publishNews(@RequestBody PandemicNews news) {
         pandemicService.publishNews(news);
         return Result.success("发布成功");
@@ -48,6 +50,7 @@ public class PandemicController {
 
     @Operation(summary = "删除新闻")
     @DeleteMapping("/news/{id}")
+    @OperateLog(module = "疫情新闻", operation = "删除新闻")
     public Result<String> deleteNews(@PathVariable String id) {
         pandemicService.removeById(id);
         return Result.success("删除成功");
@@ -81,6 +84,7 @@ public class PandemicController {
 
     @Operation(summary = "发送推送")
     @PostMapping("/push")
+    @OperateLog(module = "消息推送", operation = "发送推送")
     public Result<String> sendPush(@RequestBody Map<String, Object> pushData) {
         pandemicService.sendPush(pushData);
         return Result.success("推送发送成功");
@@ -94,6 +98,7 @@ public class PandemicController {
 
     @Operation(summary = "删除推送记录")
     @DeleteMapping("/push/{id}")
+    @OperateLog(module = "消息推送", operation = "删除推送记录")
     public Result<String> deletePushRecord(@PathVariable Long id) {
         pandemicService.deletePushRecord(id);
         return Result.success("删除成功");

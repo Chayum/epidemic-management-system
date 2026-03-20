@@ -43,6 +43,11 @@ public class DashboardVO implements Serializable {
      * 实时动态（最新申领和捐赠）
      */
     private List<RealtimeActivity> realtimeActivities;
+
+    /**
+     * 近期操作日志
+     */
+    private List<OperateLogVO> operationLogs;
     
     /**
      * 核心指标
@@ -243,30 +248,61 @@ public class DashboardVO implements Serializable {
          * 活动 ID
          */
         private String id;
-        
+
         /**
          * 活动类型：application-申领，donation-捐赠
          */
         private String type;
-        
+
         /**
          * 活动标题
          */
         private String title;
-        
+
         /**
          * 活动描述
          */
         private String description;
-        
+
         /**
          * 创建时间
          */
         private String createTime;
-        
+
         /**
          * 状态
          */
         private String status;
+    }
+
+    /**
+     * 操作日志VO
+     */
+    @Data
+    public static class OperateLogVO {
+        /**
+         * 时间
+         */
+        private String time;
+
+        /**
+         * 操作人
+         */
+        private String user;
+
+        /**
+         * 操作类型
+         */
+        private String action;
+
+        /**
+         * 操作详情
+         */
+        private String detail;
+
+        /**
+         * IP地址
+         */
+        private String ip;
     }
 }

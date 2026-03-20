@@ -2,6 +2,7 @@ package com.epidemic.material.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.material.annotation.OperateLog;
 import com.epidemic.material.dto.DonationApproveDTO;
 import com.epidemic.material.dto.DonationQueryDTO;
 import com.epidemic.material.dto.DonationSubmitDTO;
@@ -84,6 +85,7 @@ public class DonationController {
      */
     @Operation(summary = "提交捐赠申请")
     @PostMapping
+    @OperateLog(module = "捐赠管理", operation = "提交捐赠")
     public Result<String> submit(@Validated @RequestBody DonationSubmitDTO submitDTO, 
                                  @RequestHeader(value = "X-User-Id", required = false) String userIdStr,
                                  @RequestHeader(value = "X-User-Name", required = false) String username) {
@@ -140,6 +142,7 @@ public class DonationController {
      */
     @Operation(summary = "审核捐赠")
     @PostMapping("/approve")
+    @OperateLog(module = "捐赠管理", operation = "审核捐赠")
     public Result<String> approve(@Validated @RequestBody DonationApproveDTO approveDTO,
                                   @RequestHeader(value = "X-User-Id", required = false) String userIdStr,
                                   @RequestHeader(value = "X-User-Name", required = false) String username) {

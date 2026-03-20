@@ -60,3 +60,14 @@ export function getUserStats() {
     method: 'get'
   })
 }
+
+/**
+ * 分页查询操作日志
+ */
+export function getOperateLogList(params) {
+  return request({
+    url: '/log/list',
+    method: 'get',
+    params
+  })
+}

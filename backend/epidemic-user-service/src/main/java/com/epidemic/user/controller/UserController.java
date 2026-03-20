@@ -2,6 +2,7 @@ package com.epidemic.user.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.user.annotation.OperateLog;
 import com.epidemic.user.entity.User;
 import com.epidemic.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,6 +63,7 @@ public class UserController {
      * @return 操作结果消息
      */
     @PostMapping
+    @OperateLog(module = "用户管理", operation = "创建用户")
     public Result<String> add(@RequestBody User user) {
         userService.addUser(user);
         return Result.success("添加成功");
@@ -73,6 +75,7 @@ public class UserController {
      * @return 操作结果消息
      */
     @PutMapping
+    @OperateLog(module = "用户管理", operation = "更新用户")
     public Result<String> update(@RequestBody User user) {
         userService.updateUser(user);
         return Result.success("修改成功");
@@ -84,6 +87,7 @@ public class UserController {
      * @return 操作结果消息
      */
     @DeleteMapping("/{id}")
+    @OperateLog(module = "用户管理", operation = "删除用户")
     public Result<String> delete(@PathVariable Long id) {
         userService.deleteUser(id);
         return Result.success("删除成功");
@@ -96,6 +100,7 @@ public class UserController {
      * @return 操作结果消息
      */
     @PutMapping("/status/{id}")
+    @OperateLog(module = "用户管理", operation = "更新用户状态")
     public Result<String> updateStatus(@PathVariable Long id, @RequestParam String status) {
         userService.updateUserStatus(id, status);
         return Result.success("状态更新成功");
@@ -107,6 +112,7 @@ public class UserController {
      * @return 操作结果消息
      */
     @PutMapping("/batch/status")
+    @OperateLog(module = "用户管理", operation = "批量更新用户状态")
     public Result<String> batchUpdateStatus(@RequestBody java.util.Map<String, Object> params) {
         @SuppressWarnings("unchecked")
         List<Long> ids = (List<Long>) params.get("ids");
@@ -121,6 +127,7 @@ public class UserController {
      * @return 操作结果消息
      */
     @DeleteMapping("/batch")
+    @OperateLog(module = "用户管理", operation = "批量删除用户")
     public Result<String> batchDelete(@RequestBody java.util.Map<String, Object> params) {
         @SuppressWarnings("unchecked")
         List<Long> ids = (List<Long>) params.get("ids");

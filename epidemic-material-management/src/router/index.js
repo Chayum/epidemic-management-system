@@ -77,6 +77,12 @@ const routes = [
         meta: { title: '控制台', icon: 'Monitor', requiresAuth: true, roles: ['admin'] }
       },
       {
+        path: 'log/list',
+        name: 'LogList',
+        component: () => import('@/views/log/list.vue'),
+        meta: { title: '操作日志', requiresAuth: true, roles: ['admin'] }
+      },
+      {
         path: 'user-manage',
         name: 'UserManage',
         meta: { title: '用户管理', icon: 'User', requiresAuth: true, roles: ['admin'] },
