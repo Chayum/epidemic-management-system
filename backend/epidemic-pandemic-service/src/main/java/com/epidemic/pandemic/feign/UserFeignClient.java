@@ -12,7 +12,8 @@ import java.util.Map;
  * 用户服务 Feign Client
  * 用于调用 user-service 的用户接口
  */
-@FeignClient(name = "epidemic-user-service", path = "/user")
+@FeignClient(name = "epidemic-user-service", path = "/user",
+             fallbackFactory = UserFeignClientFallbackFactory.class)
 public interface UserFeignClient {
 
     /**

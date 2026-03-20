@@ -11,33 +11,33 @@ spring:
           lower-case-service-id: true
       routes:
         - id: auth-login
-          uri: http://localhost:8081
+          uri: lb://epidemic-user-service
           predicates:
             - Path=/api/auth/login
           filters:
             - StripPrefix=1
             - LoginToken
         - id: auth-logout
-          uri: http://localhost:8081
+          uri: lb://epidemic-user-service
           predicates:
             - Path=/api/auth/logout
           filters:
             - StripPrefix=1
             - LogoutToken
         - id: user-service
-          uri: http://localhost:8081
+          uri: lb://epidemic-user-service
           predicates:
             - Path=/api/user/**, /api/auth/**
           filters:
             - StripPrefix=1
         - id: material-service
-          uri: http://localhost:8082
+          uri: lb://epidemic-material-service
           predicates:
             - Path=/api/material/**, /api/inventory/**, /api/donation/**, /api/application/**, /api/stats/**, /api/stock/**
           filters:
             - StripPrefix=1
         - id: pandemic-service
-          uri: http://localhost:8083
+          uri: lb://epidemic-pandemic-service
           predicates:
             - Path=/api/pandemic/**, /api/notification/**
           filters:

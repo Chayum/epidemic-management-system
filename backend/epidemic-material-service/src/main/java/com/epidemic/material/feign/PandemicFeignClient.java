@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.RequestParam;
  * 疫情新闻服务 Feign Client
  * 用于调用 pandemic-service 的疫情新闻接口
  */
-@FeignClient(name = "epidemic-pandemic-service", path = "/pandemic")
+@FeignClient(name = "epidemic-pandemic-service", path = "/pandemic",
+             fallbackFactory = PandemicFeignClientFallbackFactory.class)
 public interface PandemicFeignClient {
 
     /**

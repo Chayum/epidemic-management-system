@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -90,8 +91,8 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
      */
     @Override
     public void addMaterial(Material material) {
-        // 生成唯一ID（此处简化使用时间戳，生产环境建议使用雪花算法）
-        material.setId("M" + System.currentTimeMillis());
+        // 生成唯一ID（使用UUID替代时间戳，避免高并发碰撞）
+        material.setId("M" + UUID.randomUUID().toString().replace("-", "").substring(0, 16));
         material.setCreateTime(LocalDateTime.now());
         material.setUpdateTime(LocalDateTime.now());
         if (material.getStatus() == null) {

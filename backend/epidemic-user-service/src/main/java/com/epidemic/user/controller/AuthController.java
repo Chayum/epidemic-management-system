@@ -11,11 +11,11 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,6 +33,9 @@ public class AuthController {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     /**
      * 用户登录接口
@@ -77,8 +80,25 @@ public class AuthController {
             return Result.error("用户不存在");
         }
 
-        // 校验密码（此处应使用加密比对，当前为明文比对示例）
-        if (!Objects.equals(user.getPassword(), loginRequest.getPassword())) {
+        // 校验密码（兼容旧明文密码，匹配成功后自动升级为BCrypt）
+        String rawPassword = loginRequest.getPassword();
+        String dbPassword = user.getPassword();
+        boolean passwordMatched = false;
+
+        if (passwordEncoder.matches(rawPassword, dbPassword)) {
+            // BCrypt格式密码匹配成功
+            passwordMatched = true;
+        } else if (rawPassword.equals(dbPassword)) {
+            // 旧明文密码匹配成功，需要升级为BCrypt
+            passwordMatched = true;
+            User updateUser = new User();
+            updateUser.setId(user.getId());
+            updateUser.setPassword(passwordEncoder.encode(rawPassword));
+            userService.updateUser(updateUser);
+            log.info("用户 {} 的密码已从明文升级为BCrypt加密", username);
+        }
+
+        if (!passwordMatched) {
             // 增加失败次数
             incrementLoginFailCount(failKey);
             return Result.error("用户名或密码错误");
@@ -197,14 +217,14 @@ public class AuthController {
         User user = userService.getUserById(userId);
         
         // 校验原密码
-        if (!oldPwd.equals(user.getPassword())) {
+        if (!passwordEncoder.matches(oldPwd, user.getPassword())) {
             return Result.error("原密码错误");
         }
         
-        // 更新新密码
+        // 更新新密码（使用BCrypt加密存储）
         User updateUser = new User();
         updateUser.setId(userId);
-        updateUser.setPassword(newPwd);
+        updateUser.setPassword(passwordEncoder.encode(newPwd));
         userService.updateUser(updateUser);
         
         // 清除 Redis 中的 Token，强制用户重新登录

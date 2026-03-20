@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import com.epidemic.material.dto.StockOrderDTO;
 import com.epidemic.material.service.StockService;
 import java.math.BigDecimal;
@@ -96,7 +97,7 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
     @Transactional(rollbackFor = Exception.class)
     public void submitDonation(DonationSubmitDTO submitDTO, Long userId, String username) {
         Donation donation = donationConverter.toEntity(submitDTO);
-        donation.setId("D" + System.currentTimeMillis()); // 生成捐赠单号
+        donation.setId("D" + UUID.randomUUID().toString().replace("-", "").substring(0, 16)); // 生成捐赠单号
         donation.setStatus("pending"); // 初始状态为待审核
         donation.setDonateTime(LocalDateTime.now());
         
