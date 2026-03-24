@@ -3,8 +3,10 @@ package com.epidemic.material.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.epidemic.common.enums.MaterialTypeEnum;
 import com.epidemic.common.exception.BusinessException;
 import com.epidemic.common.result.PageResult;
+import com.epidemic.common.util.InventoryWarningUtil;
 import com.epidemic.material.entity.Material;
 import com.epidemic.material.mapper.MaterialMapper;
 import com.epidemic.material.service.CacheService;
@@ -22,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -115,11 +116,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
 
         // 检查库存预警状态
         if (material.getStock() != null && material.getThreshold() != null) {
-            if (material.getStock() < material.getThreshold()) {
-                material.setStatus("warning");
-            } else {
-                material.setStatus("normal");
-            }
+            material.setStatus(InventoryWarningUtil.calculateStatus(material.getStock(), material.getThreshold()));
         }
 
         baseMapper.updateById(material);
@@ -194,8 +191,7 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
             map.put("threshold", m.getThreshold());
             map.put("unit", m.getUnit());
             map.put("type", m.getType());
-            // 库存 < 阈值的一半为高风险 (high)，否则为低风险 (low)
-            map.put("warningLevel", m.getStock() < m.getThreshold() * 0.5 ? "high" : "low");
+            map.put("warningLevel", InventoryWarningUtil.calculateWarningLevel(m.getStock(), m.getThreshold()));
             return map;
         }).collect(Collectors.toList());
         
@@ -216,19 +212,14 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
             log.debug("从缓存获取物资类型列表");
             return (List<Map<String, String>>) cachedTypes;
         }
-        
-        // 2. 缓存未命中，返回预定义的类型列表
-        List<Map<String, String>> typeList = new ArrayList<>();
-        typeList.add(createTypeMap("protective", "防护物资"));
-        typeList.add(createTypeMap("disinfection", "消杀物资"));
-        typeList.add(createTypeMap("testing", "检测物资"));
-        typeList.add(createTypeMap("equipment", "医疗设备"));
-        typeList.add(createTypeMap("other", "其他物资"));
-        
+
+        // 2. 缓存未命中，使用枚举获取类型列表
+        List<Map<String, String>> typeList = MaterialTypeEnum.toList();
+
         // 3. 存入缓存
         cacheService.setMaterialTypes(typeList);
         log.info("物资类型列表已缓存");
-        
+
         return typeList;
     }
 
@@ -267,40 +258,6 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
     }
 
     /**
-     * 创建类型 Map
-     */
-    private Map<String, String> createTypeMap(String code, String name) {
-        Map<String, String> map = new HashMap<>();
-        map.put("code", code);
-        map.put("name", name);
-        return map;
-    }
-
-    /**
-     * 检查物资预警状态
-     * 根据库存数量和阈值判断是否需要预警
-     * 该方法仅用于日志记录，实际预警状态在查询时动态计算
-     * 
-     * @param material 物资对象
-     */
-    private void checkWarningStatus(Material material) {
-        if (material == null) {
-            return;
-        }
-
-        Integer stock = material.getStock();
-        Integer threshold = material.getThreshold();
-
-        if (stock != null && threshold != null && stock < threshold) {
-            material.setStatus("warning");
-            log.debug("物资 {} 库存低于阈值，需要预警：当前库存={}, 阈值={}",
-                     material.getName(), stock, threshold);
-        } else {
-            material.setStatus("normal");
-        }
-    }
-
-    /**
      * 库存盘点/校准
      * 更新物资的实际库存数量
      *
@@ -320,11 +277,11 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         // 如果盘点数量与账面数量不一致，则生成盘点差异记录
         if (!actualStock.equals(material.getStock())) {
             Integer difference = actualStock - material.getStock();
-            
+
             // 更新库存
             material.setStock(actualStock);
             material.setUpdateTime(LocalDateTime.now());
-            checkWarningStatus(material);
+            material.setStatus(InventoryWarningUtil.calculateStatus(actualStock, material.getThreshold()));
             baseMapper.updateById(material);
             
             // 清除缓存
@@ -365,29 +322,24 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         Map<String, Object> stats = new HashMap<>();
         // 统计总库存
         stats.put("totalStock", baseMapper.sumStock());
-        
+
         // 按类型统计库存分布
         List<Map<String, Object>> typeStats = baseMapper.countByType();
-        
+
         // 映射类型编码为中文名称
-        Map<String, String> typeNameMap = new HashMap<>();
-        typeNameMap.put("protective", "防护物资");
-        typeNameMap.put("disinfection", "消杀物资");
-        typeNameMap.put("testing", "检测物资");
-        typeNameMap.put("equipment", "医疗设备");
-        typeNameMap.put("other", "其他物资");
-        
+        Map<String, String> typeNameMap = MaterialTypeEnum.toNameMap();
+
         for (Map<String, Object> item : typeStats) {
             String type = (String) item.get("type");
             item.put("name", typeNameMap.getOrDefault(type, type));
         }
-        
+
         stats.put("typeStats", typeStats);
-        
+
         // 3. 存入缓存
         cacheService.setMaterialStats(stats);
         log.info("物资统计数据已缓存");
-        
+
         return stats;
     }
     

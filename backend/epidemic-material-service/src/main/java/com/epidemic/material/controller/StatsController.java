@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.epidemic.common.entity.OperateLog;
 import com.epidemic.common.feign.LogFeignClient;
 import com.epidemic.common.result.Result;
+import com.epidemic.common.util.UserContext;
 import com.epidemic.material.entity.Application;
 import com.epidemic.material.entity.DashboardVO;
 import com.epidemic.material.entity.Donation;
@@ -111,12 +112,9 @@ public class StatsController {
      */
     @Operation(summary = "获取用户个人统计数据")
     @GetMapping("/user")
-    public Result<Map<String, Object>> getUserStats(@RequestHeader("X-User-Id") String userIdStr) {
-        if (userIdStr == null) {
-            return Result.error(401, "无效的Token或用户未登录");
-        }
-        Long userId = Long.valueOf(userIdStr);
-        
+    public Result<Map<String, Object>> getUserStats() {
+        Long userId = UserContext.getUserId();
+
         Map<String, Object> data = new HashMap<>();
         
         // 统计我的申领总数

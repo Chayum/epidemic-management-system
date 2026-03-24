@@ -3,6 +3,7 @@ package com.epidemic.material.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.common.util.UserContext;
 import com.epidemic.material.annotation.OperateLog;
 import com.epidemic.material.dto.StockOrderDTO;
 import com.epidemic.material.entity.InventoryLog;
@@ -44,10 +45,8 @@ public class StockController {
     @Operation(summary = "创建出入库单")
     @PostMapping("/order")
     @OperateLog(module = "出入库", operation = "创建单据")
-    public Result<String> createOrder(@Valid @RequestBody StockOrderDTO dto,
-                                      @RequestHeader("X-User-Id") String userId,
-                                      @RequestHeader("X-User-Name") String username) {
-        String orderId = stockService.createOrder(dto, Long.valueOf(userId), username);
+    public Result<String> createOrder(@Valid @RequestBody StockOrderDTO dto) {
+        String orderId = stockService.createOrder(dto, UserContext.getUserId(), UserContext.getUsername());
         return Result.success(orderId);
     }
 
@@ -56,19 +55,16 @@ public class StockController {
     @OperateLog(module = "出入库", operation = "审核单据")
     public Result<String> auditOrder(@PathVariable String id,
                                      @RequestParam boolean approved,
-                                     @RequestParam(required = false) String remark,
-                                     @RequestHeader("X-User-Id") String userId,
-                                     @RequestHeader("X-User-Name") String username) {
-        stockService.auditOrder(id, Long.valueOf(userId), username, approved, remark);
+                                     @RequestParam(required = false) String remark) {
+        stockService.auditOrder(id, UserContext.getUserId(), UserContext.getUsername(), approved, remark);
         return Result.success("审核完成");
     }
 
     @Operation(summary = "作废单据")
     @PostMapping("/order/{id}/void")
     @OperateLog(module = "出入库", operation = "作废单据")
-    public Result<String> voidOrder(@PathVariable String id,
-                                    @RequestHeader("X-User-Id") String userId) {
-        stockService.voidOrder(id, Long.valueOf(userId));
+    public Result<String> voidOrder(@PathVariable String id) {
+        stockService.voidOrder(id, UserContext.getUserId());
         return Result.success("作废成功");
     }
 

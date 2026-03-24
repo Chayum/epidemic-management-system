@@ -2,6 +2,7 @@ package com.epidemic.user.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.epidemic.common.result.Result;
+import com.epidemic.common.util.UserContext;
 import com.epidemic.user.annotation.OperateLog;
 import com.epidemic.user.dto.LoginRequest;
 import com.epidemic.user.entity.User;
@@ -181,12 +182,9 @@ public class AuthController {
      */
     @Operation(summary = "获取当前用户信息")
     @GetMapping("/info")
-    public Result<User> getCurrentUserInfo(@RequestHeader("X-User-Id") String userIdStr) {
-        if (userIdStr == null) {
-             return Result.error(401, "用户未登录");
-        }
-        Long userId = Long.valueOf(userIdStr);
-        
+    public Result<User> getCurrentUserInfo() {
+        Long userId = UserContext.getUserId();
+
         // 查询用户并脱敏密码
         User user = userService.getUserById(userId);
         if (user != null) {
@@ -198,19 +196,14 @@ public class AuthController {
     /**
      * 修改密码接口
      *
-     * @param userIdStr 网关透传的用户ID
      * @param params 参数Map，需包含 oldPwd 和 newPwd
      * @return 修改结果
      */
     @Operation(summary = "修改密码")
     @PutMapping("/password")
     @OperateLog(module = "认证管理", operation = "修改密码")
-    public Result<String> changePassword(@RequestHeader("X-User-Id") String userIdStr, 
-                                         @RequestBody Map<String, String> params) {
-        if (userIdStr == null) {
-             return Result.error(401, "用户未登录");
-        }
-        Long userId = Long.valueOf(userIdStr);
+    public Result<String> changePassword(@RequestBody Map<String, String> params) {
+        Long userId = UserContext.getUserId();
         String oldPwd = params.get("oldPwd");
         String newPwd = params.get("newPwd");
 
@@ -219,23 +212,23 @@ public class AuthController {
         }
 
         User user = userService.getUserById(userId);
-        
+
         // 校验原密码
         if (!passwordEncoder.matches(oldPwd, user.getPassword())) {
             return Result.error("原密码错误");
         }
-        
+
         // 更新新密码（使用BCrypt加密存储）
         User updateUser = new User();
         updateUser.setId(userId);
         updateUser.setPassword(passwordEncoder.encode(newPwd));
         userService.updateUser(updateUser);
-        
+
         // 清除 Redis 中的 Token，强制用户重新登录
         String tokenKey = "auth:token:" + userId;
         redisTemplate.delete(tokenKey);
         log.info("用户 {} 修改密码成功，已清除 Redis 中的 Token", user.getUsername());
-        
+
         return Result.success("密码修改成功");
     }
 
@@ -243,22 +236,18 @@ public class AuthController {
      * 更新用户个人资料
      * 允许更新姓名、电话、单位等非敏感信息
      *
-     * @param userIdStr 网关透传的用户ID
      * @param updateUser 包含待更新字段的用户对象
      * @return 更新结果
      */
     @Operation(summary = "更新用户信息")
     @PutMapping("/profile")
     @OperateLog(module = "认证管理", operation = "更新个人资料")
-    public Result<String> updateProfile(@RequestHeader("X-User-Id") String userIdStr, @RequestBody User updateUser) {
-        if (userIdStr == null) {
-             return Result.error(401, "用户未登录");
-        }
-        Long userId = Long.valueOf(userIdStr);
-        
+    public Result<String> updateProfile(@RequestBody User updateUser) {
+        Long userId = UserContext.getUserId();
+
         User user = new User();
         user.setId(userId);
-        
+
         // 仅更新非空字段
         if (StringUtils.hasText(updateUser.getName())) {
             user.setName(updateUser.getName());
@@ -269,7 +258,7 @@ public class AuthController {
         if (StringUtils.hasText(updateUser.getUnit())) {
             user.setUnit(updateUser.getUnit());
         }
-        
+
         userService.updateUser(user);
         return Result.success("更新成功");
     }

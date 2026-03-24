@@ -2,6 +2,7 @@ package com.epidemic.material.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.common.util.UserContext;
 import com.epidemic.material.annotation.OperateLog;
 import com.epidemic.material.dto.DonationApproveDTO;
 import com.epidemic.material.dto.DonationQueryDTO;
@@ -86,17 +87,9 @@ public class DonationController {
     @Operation(summary = "提交捐赠申请")
     @PostMapping
     @OperateLog(module = "捐赠管理", operation = "提交捐赠")
-    public Result<String> submit(@Validated @RequestBody DonationSubmitDTO submitDTO, 
-                                 @RequestHeader(value = "X-User-Id", required = false) String userIdStr,
-                                 @RequestHeader(value = "X-User-Name", required = false) String username) {
-        Long userId = null;
-        if (userIdStr != null) {
-            try {
-                userId = Long.valueOf(userIdStr);
-            } catch (NumberFormatException e) {
-                // ignore
-            }
-        }
+    public Result<String> submit(@Validated @RequestBody DonationSubmitDTO submitDTO) {
+        Long userId = UserContext.getUserIdOrNull();
+        String username = UserContext.getUsernameOrDefault("User_");
         donationService.submitDonation(submitDTO, userId, username);
         return Result.success("提交成功");
     }
@@ -116,14 +109,9 @@ public class DonationController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String id,
-            @RequestHeader("X-User-Id") String userIdStr) {
-        
-        if (userIdStr == null) {
-             return Result.error(401, "用户未登录");
-        }
-        Long userId = Long.valueOf(userIdStr);
-        
+            @RequestParam(required = false) String id) {
+        Long userId = UserContext.getUserId();
+
         DonationQueryDTO queryDTO = new DonationQueryDTO();
         queryDTO.setPage(page);
         queryDTO.setSize(size);
@@ -143,24 +131,10 @@ public class DonationController {
     @Operation(summary = "审核捐赠")
     @PostMapping("/approve")
     @OperateLog(module = "捐赠管理", operation = "审核捐赠")
-    public Result<String> approve(@Validated @RequestBody DonationApproveDTO approveDTO,
-                                  @RequestHeader(value = "X-User-Id", required = false) String userIdStr,
-                                  @RequestHeader(value = "X-User-Name", required = false) String username) {
-        Long userId = null;
-        if (userIdStr != null) {
-            try {
-                userId = Long.valueOf(userIdStr);
-            } catch (NumberFormatException e) {
-                // ignore
-            }
-        }
-        // 如果无法获取用户名，使用默认值或ID拼接
-        if (username == null && userId != null) {
-            username = "User_" + userId;
-        } else if (username == null) {
-            username = "System";
-        }
-        
+    public Result<String> approve(@Validated @RequestBody DonationApproveDTO approveDTO) {
+        Long userId = UserContext.getUserIdOrNull();
+        String username = UserContext.getUsernameOrDefault("User_");
+
         donationService.approveDonation(approveDTO, userId, username);
         return Result.success("审核完成");
     }

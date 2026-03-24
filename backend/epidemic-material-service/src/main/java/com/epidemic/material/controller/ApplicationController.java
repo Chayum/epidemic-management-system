@@ -2,6 +2,7 @@ package com.epidemic.material.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.common.util.UserContext;
 import com.epidemic.material.annotation.OperateLog;
 import com.epidemic.material.dto.ApplicationApproveDTO;
 import com.epidemic.material.dto.ApplicationQueryDTO;
@@ -73,17 +74,9 @@ public class ApplicationController {
     @Operation(summary = "提交物资申请")
     @PostMapping
     @OperateLog(module = "物资申请", operation = "提交申请")
-    public Result<String> submit(@Validated @RequestBody ApplicationSubmitDTO submitDTO, 
-                                 @RequestHeader("X-User-Id") String userIdStr,
-                                 @RequestHeader(value = "X-User-Name", required = false) String username) {
-        if (userIdStr == null) {
-             return Result.error(401, "用户未登录");
-        }
-        Long userId = Long.valueOf(userIdStr);
-        // 如果无法获取用户名，使用默认值或ID拼接
-        if (username == null) {
-            username = "User_" + userId;
-        }
+    public Result<String> submit(@Validated @RequestBody ApplicationSubmitDTO submitDTO) {
+        Long userId = UserContext.getUserId();
+        String username = UserContext.getUsernameOrDefault("User_");
         applicationService.submitApplication(submitDTO, userId, username);
         return Result.success("提交成功");
     }
@@ -98,17 +91,9 @@ public class ApplicationController {
     @Operation(summary = "审核申请")
     @PostMapping("/approve")
     @OperateLog(module = "物资申请", operation = "审核申请")
-    public Result<String> approve(@Validated @RequestBody ApplicationApproveDTO approveDTO, 
-                                  @RequestHeader("X-User-Id") String userIdStr,
-                                  @RequestHeader(value = "X-User-Name", required = false) String username) {
-        if (userIdStr == null) {
-             return Result.error(401, "用户未登录");
-        }
-        Long userId = Long.valueOf(userIdStr);
-        // 如果无法获取用户名，使用默认值或ID拼接
-        if (username == null) {
-            username = "User_" + userId;
-        }
+    public Result<String> approve(@Validated @RequestBody ApplicationApproveDTO approveDTO) {
+        Long userId = UserContext.getUserId();
+        String username = UserContext.getUsernameOrDefault("User_");
         applicationService.approveApplication(approveDTO, userId, username);
         return Result.success("审核完成");
     }
@@ -122,11 +107,8 @@ public class ApplicationController {
     @Operation(summary = "取消申请")
     @PostMapping("/{id}/cancel")
     @OperateLog(module = "物资申请", operation = "取消申请")
-    public Result<String> cancel(@PathVariable String id, @RequestHeader("X-User-Id") String userIdStr) {
-        if (userIdStr == null) {
-             return Result.error(401, "用户未登录");
-        }
-        Long userId = Long.valueOf(userIdStr);
+    public Result<String> cancel(@PathVariable String id) {
+        Long userId = UserContext.getUserId();
         applicationService.cancelApplication(id, userId);
         return Result.success("取消成功");
     }
@@ -144,12 +126,8 @@ public class ApplicationController {
     public Result<PageResult<ApplicationVO>> myApplications(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String status,
-            @RequestHeader("X-User-Id") String userIdStr) {
-        if (userIdStr == null) {
-             return Result.error(401, "用户未登录");
-        }
-        Long userId = Long.valueOf(userIdStr);
+            @RequestParam(required = false) String status) {
+        Long userId = UserContext.getUserId();
         ApplicationQueryDTO queryDTO = new ApplicationQueryDTO();
         queryDTO.setPage(page);
         queryDTO.setSize(size);
