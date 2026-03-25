@@ -485,9 +485,9 @@ public class StatsController {
         List<DashboardVO.OperateLogVO> result = new ArrayList<>();
 
         try {
-            // 通过 Feign 获取最新的 10 条操作日志
+            // 通过 LogFeignClient 获取最新的 10 条操作日志
             Result<List<OperateLog>> response = logFeignClient.getRecentLogs(10);
-            if (response.getCode() == 200 && response.getData() != null) {
+            if (response != null && response.getData() != null) {
                 for (OperateLog log : response.getData()) {
                     DashboardVO.OperateLogVO vo = new DashboardVO.OperateLogVO();
                     vo.setTime(log.getOperateTime() != null ? log.getOperateTime().toString() : "");

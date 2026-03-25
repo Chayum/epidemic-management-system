@@ -77,7 +77,7 @@
         <div class="card-container recent-section">
           <div class="card-header">
             <h3>最新疫情动态</h3>
-            <el-button type="primary" link>查看更多</el-button>
+            <el-button type="primary" link @click="goToNewsMore">查看更多</el-button>
           </div>
           <div class="news-list">
             <div v-for="news in newsList" :key="news.id" class="news-item" @click="handleViewNews(news)">
@@ -116,11 +116,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
 import { getUserStats } from '@/api/stats'
 import { getNewsList } from '@/api/pandemic'
 
+const router = useRouter()
 const currentDate = computed(() => dayjs().format('YYYY年MM月DD日'))
 
 const stats = ref([
@@ -160,6 +162,10 @@ const fetchHomeData = async () => {
 
 const handleViewNews = (news) => {
   ElMessage.info(`查看: ${news.title}`)
+}
+
+const goToNewsMore = () => {
+  router.push('/user/pandemic-news')
 }
 
 onMounted(() => {

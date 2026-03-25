@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import com.epidemic.common.util.UserContext;
-import com.epidemic.material.annotation.OperateLog;
+import com.epidemic.common.annotation.OperateLog;
 import com.epidemic.material.dto.StockOrderDTO;
 import com.epidemic.material.entity.InventoryLog;
 import com.epidemic.material.entity.StockOrder;

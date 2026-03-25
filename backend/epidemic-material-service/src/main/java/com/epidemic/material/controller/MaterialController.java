@@ -2,7 +2,7 @@ package com.epidemic.material.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
-import com.epidemic.material.annotation.OperateLog;
+import com.epidemic.common.annotation.OperateLog;
 import com.epidemic.material.entity.Material;
 import com.epidemic.material.service.MaterialService;
 import io.swagger.v3.oas.annotations.Operation;

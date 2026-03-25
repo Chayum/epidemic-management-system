@@ -3,7 +3,7 @@ package com.epidemic.pandemic.controller;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import com.epidemic.common.util.UserContext;
-import com.epidemic.pandemic.annotation.OperateLog;
+import com.epidemic.common.annotation.OperateLog;
 import com.epidemic.pandemic.service.UserNotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

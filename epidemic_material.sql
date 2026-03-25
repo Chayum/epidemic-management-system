@@ -519,6 +519,29 @@ INSERT INTO `application_track` (`application_id`, `status`, `description`, `ope
 ('A20260318003', 'pending', '提交物资申请', 7, '刘医生', '2026-03-18 10:00:00');
 
 -- ========================================
+-- 9. 操作日志表
+-- ========================================
+DROP TABLE IF EXISTS `sys_operate_log`;
+CREATE TABLE `sys_operate_log` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+    `user_id` BIGINT DEFAULT NULL COMMENT '用户ID',
+    `username` VARCHAR(50) DEFAULT NULL COMMENT '用户名',
+    `module` VARCHAR(50) DEFAULT NULL COMMENT '操作模块',
+    `operation` VARCHAR(100) DEFAULT NULL COMMENT '操作描述',
+    `method` VARCHAR(200) DEFAULT NULL COMMENT '请求方法',
+    `params` TEXT DEFAULT NULL COMMENT '请求参数',
+    `ip` VARCHAR(50) DEFAULT NULL COMMENT 'IP地址',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态：0-失败，1-成功',
+    `error_msg` TEXT DEFAULT NULL COMMENT '错误信息',
+    `execute_time` BIGINT DEFAULT NULL COMMENT '执行时长（毫秒）',
+    `operate_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_username` (`username`),
+    KEY `idx_module` (`module`),
+    KEY `idx_operate_time` (`operate_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作日志表';
+
+-- ========================================
 -- 初始化捐赠数据
 -- ========================================
 INSERT INTO `donation` (`id`, `material_name`, `type`, `quantity`, `unit`, `donor_id`, `donor_unit`, `contact_person`, `contact_phone`, `receive_address`, `source`, `production_date`, `expiry_date`, `remark`, `status`, `donate_time`, `approve_time`, `approver_id`, `approver_name`, `approve_remark`, `deleted`) VALUES

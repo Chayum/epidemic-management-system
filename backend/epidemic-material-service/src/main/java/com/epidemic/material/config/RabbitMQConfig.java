@@ -1,4 +1,4 @@
-package com.epidemic.pandemic.config;
+package com.epidemic.material.config;
 
 import com.epidemic.common.mq.LogConstants;
 import org.springframework.amqp.core.Binding;
@@ -14,46 +14,13 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * RabbitMQ 配置类
- * 用于消息推送系统的队列和交换机配置
+ * 配置日志队列
  */
 @Configuration
 public class RabbitMQConfig {
 
-    /** 交换机名称 */
-    public static final String PUSH_EXCHANGE = "pandemic.push.exchange";
-
-    /** 队列名称 */
-    public static final String PUSH_QUEUE = "pandemic.push.queue";
-
-    /** 路由键 */
-    public static final String PUSH_ROUTING_KEY = "pandemic.push";
-
     /**
      * 创建交换机
-     */
-    @Bean
-    public DirectExchange pushExchange() {
-        return new DirectExchange(PUSH_EXCHANGE);
-    }
-
-    /**
-     * 创建队列
-     */
-    @Bean
-    public Queue pushQueue() {
-        return new Queue(PUSH_QUEUE, true);
-    }
-
-    /**
-     * 绑定队列到交换机
-     */
-    @Bean
-    public Binding pushBinding(Queue pushQueue, DirectExchange pushExchange) {
-        return BindingBuilder.bind(pushQueue).to(pushExchange).with(PUSH_ROUTING_KEY);
-    }
-
-    /**
-     * 日志交换机
      */
     @Bean
     public DirectExchange logExchange() {
@@ -61,7 +28,7 @@ public class RabbitMQConfig {
     }
 
     /**
-     * 日志队列
+     * 创建队列
      */
     @Bean
     public Queue logQueue() {
@@ -69,7 +36,7 @@ public class RabbitMQConfig {
     }
 
     /**
-     * 绑定日志队列到交换机
+     * 绑定队列到交换机
      */
     @Bean
     public Binding logBinding(Queue logQueue, DirectExchange logExchange) {

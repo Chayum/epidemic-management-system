@@ -44,18 +44,18 @@
         </el-table-column>
         <el-table-column prop="username" label="操作人" width="120" />
         <el-table-column prop="module" label="模块" width="140" />
-        <el-table-column prop="description" label="操作描述" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="operation" label="操作描述" min-width="200" show-overflow-tooltip />
         <el-table-column prop="method" label="请求方法" width="100" />
         <el-table-column prop="ip" label="IP地址" width="140" />
-        <el-table-column prop="duration" label="耗时" width="100">
+        <el-table-column prop="executeTime" label="耗时" width="100">
           <template #default="{ row }">
-            {{ row.duration ? row.duration + 'ms' : '-' }}
+            {{ row.executeTime ? row.executeTime + 'ms' : '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="80" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 0 ? 'success' : 'danger'" size="small">
-              {{ row.status === 0 ? '成功' : '失败' }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+              {{ row.status === 1 ? '成功' : '失败' }}
             </el-tag>
           </template>
         </el-table-column>

@@ -1,4 +1,4 @@
-package com.epidemic.pandemic.annotation;
+package com.epidemic.common.annotation;
 
 import java.lang.annotation.*;
 

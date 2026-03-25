@@ -1,11 +1,11 @@
-package com.epidemic.material.service.impl;
+package com.epidemic.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.epidemic.material.entity.OperateLog;
-import com.epidemic.material.mapper.OperateLogMapper;
-import com.epidemic.material.service.OperateLogService;
+import com.epidemic.common.entity.OperateLog;
+import com.epidemic.user.mapper.OperateLogMapper;
+import com.epidemic.user.service.OperateLogService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;

@@ -3,7 +3,7 @@ package com.epidemic.user.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.epidemic.common.result.Result;
 import com.epidemic.common.util.UserContext;
-import com.epidemic.user.annotation.OperateLog;
+import com.epidemic.common.annotation.OperateLog;
 import com.epidemic.user.dto.LoginRequest;
 import com.epidemic.user.entity.User;
 import com.epidemic.user.service.UserService;

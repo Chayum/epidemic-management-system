@@ -58,6 +58,12 @@ const routes = [
         meta: { title: '消息通知', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user', 'admin'] }
       },
       {
+        path: 'pandemic-news',
+        name: 'UserPandemicNews',
+        component: () => import('@/views/user/pandemic-news.vue'),
+        meta: { title: '疫情动态', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user', 'admin'] }
+      },
+      {
         path: 'profile',
         name: 'UserProfile',
         component: () => import('@/views/user/profile.vue'),
@@ -159,7 +165,7 @@ const routes = [
             path: 'news',
             name: 'PandemicNews',
             component: () => import('@/views/pandemic/news.vue'),
-            meta: { title: '疫情动态', requiresAuth: true, roles: ['admin'] }
+            meta: { title: '疫情动态', requiresAuth: true, roles: ['admin', 'donor', 'community_staff', 'hospital_user'] }
           },
           {
             path: 'push',
@@ -171,7 +177,7 @@ const routes = [
             path: 'knowledge',
             name: 'PandemicKnowledge',
             component: () => import('@/views/pandemic/knowledge.vue'),
-            meta: { title: '防控知识库', requiresAuth: true, roles: ['admin'] }
+            meta: { title: '防控知识库', requiresAuth: true, roles: ['admin', 'donor', 'community_staff', 'hospital_user'] }
           }
         ]
       }

@@ -2,7 +2,7 @@
   <div class="pandemic-news">
     <div class="page-header">
       <h2 class="page-title">疫情动态</h2>
-      <el-button type="primary" @click="handleAddNews">
+      <el-button type="primary" @click="handleAddNews" v-if="isAdmin">
         <el-icon><Plus /></el-icon>发布动态
       </el-button>
     </div>
@@ -18,7 +18,7 @@
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
             <el-button link type="primary" @click="handleView(scope.row)">查看</el-button>
-            <el-button link type="danger" @click="handleDelete(scope.row)">删除</el-button>
+            <el-button link type="danger" @click="handleDelete(scope.row)" v-if="isAdmin">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -74,11 +74,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
 import { getNewsList, getNewsDetail, publishNews, deleteNews } from '@/api/pandemic' // Note: API method names might need update in api file
 import dayjs from 'dayjs'
+
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.userRole === 'admin')
 
 const loading = ref(false)
 const newsList = ref([])

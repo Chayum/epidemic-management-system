@@ -1,13 +1,11 @@
-package com.epidemic.log.controller;
+package com.epidemic.user.controller;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.epidemic.common.entity.OperateLog;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
-import com.epidemic.log.entity.OperateLog;
-import com.epidemic.log.service.OperateLogService;
+import com.epidemic.user.service.OperateLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +18,14 @@ import java.util.List;
 @Tag(name = "操作日志", description = "操作日志查询和管理")
 @RestController
 @RequestMapping("/log")
+@CrossOrigin
 public class OperateLogController {
 
-    @Autowired
-    private OperateLogService operateLogService;
+    private final OperateLogService operateLogService;
+
+    public OperateLogController(OperateLogService operateLogService) {
+        this.operateLogService = operateLogService;
+    }
 
     /**
      * 保存操作日志（供其他微服务调用）
@@ -59,7 +61,7 @@ public class OperateLogController {
             @RequestParam(required = false) String module,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-        Page<OperateLog> result = operateLogService.getLogList(page, size, username, module, startTime, endTime);
+        var result = operateLogService.getLogList(page, size, username, module, startTime, endTime);
         return Result.success(new PageResult<>(result.getRecords(), result.getTotal(), page, size));
     }
 }

@@ -70,7 +70,7 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
                     map.put("author", news.getAuthor());
                     map.put("status", news.getStatus());
                     map.put("viewCount", news.getViewCount());
-                    map.put("publishTime", news.getPublishTime());
+                    map.put("publishTime", news.getPublishTime() != null ? news.getPublishTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) : null);
                     cacheData.add(map);
                 }
                 cacheService.setNewsListCache(status, cacheData);

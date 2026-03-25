@@ -1,7 +1,7 @@
-package com.epidemic.material.mapper;
+package com.epidemic.user.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.epidemic.material.entity.OperateLog;
+import com.epidemic.common.entity.OperateLog;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

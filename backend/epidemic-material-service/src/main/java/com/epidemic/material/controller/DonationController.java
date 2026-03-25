@@ -3,7 +3,7 @@ package com.epidemic.material.controller;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import com.epidemic.common.util.UserContext;
-import com.epidemic.material.annotation.OperateLog;
+import com.epidemic.common.annotation.OperateLog;
 import com.epidemic.material.dto.DonationApproveDTO;
 import com.epidemic.material.dto.DonationQueryDTO;
 import com.epidemic.material.dto.DonationSubmitDTO;

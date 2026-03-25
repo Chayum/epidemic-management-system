@@ -1,5 +1,6 @@
 package com.epidemic.common.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
  * 操作日志实体
  */
 @Data
+@TableName("sys_operate_log")
 public class OperateLog implements Serializable {
 
     private static final long serialVersionUID = 1L;

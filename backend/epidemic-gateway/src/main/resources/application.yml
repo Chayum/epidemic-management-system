@@ -43,7 +43,7 @@ spring:
           filters:
             - StripPrefix=1
         - id: log-service
-          uri: lb://epidemic-log-service
+          uri: lb://epidemic-user-service
           predicates:
             - Path=/api/log/**
           filters:

@@ -2,7 +2,7 @@ package com.epidemic.pandemic.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
-import com.epidemic.pandemic.annotation.OperateLog;
+import com.epidemic.common.annotation.OperateLog;
 import com.epidemic.pandemic.entity.PandemicNews;
 import com.epidemic.pandemic.service.PandemicService;
 import io.swagger.v3.oas.annotations.Operation;

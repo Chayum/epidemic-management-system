@@ -1,6 +1,6 @@
-package com.epidemic.pandemic.aspect;
+package com.epidemic.common.aspect;
 
-import com.epidemic.common.feign.LogFeignClient;
+import com.epidemic.common.mq.LogMQProducer;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -23,16 +23,16 @@ import java.time.LocalDateTime;
 @Component
 public class OperateLogAspect {
 
-    private final LogFeignClient logFeignClient;
+    private final LogMQProducer logMQProducer;
 
-    public OperateLogAspect(LogFeignClient logFeignClient) {
-        this.logFeignClient = logFeignClient;
+    public OperateLogAspect(LogMQProducer logMQProducer) {
+        this.logMQProducer = logMQProducer;
     }
 
     /**
      * 定义切入点：所有标注 @OperateLog 注解的方法
      */
-    @Pointcut("@annotation(com.epidemic.pandemic.annotation.OperateLog)")
+    @Pointcut("@annotation(com.epidemic.common.annotation.OperateLog)")
     public void operateLogPointcut() {
     }
 
@@ -49,7 +49,7 @@ public class OperateLogAspect {
             HttpServletRequest request = getHttpServletRequest();
 
             // 获取注解信息
-            com.epidemic.pandemic.annotation.OperateLog annotation = getMethodAnnotation(joinPoint);
+            com.epidemic.common.annotation.OperateLog annotation = getMethodAnnotation(joinPoint);
             operateLog.setModule(annotation.module());
             operateLog.setOperation(annotation.operation());
 
@@ -86,21 +86,20 @@ public class OperateLogAspect {
             operateLog.setExecuteTime(executeTime);
             operateLog.setOperateTime(LocalDateTime.now());
 
-            // 异步保存日志（避免影响业务响应）
+            // 异步发送日志到 MQ
             saveLogAsync(operateLog);
         }
     }
 
     /**
-     * 异步保存日志（通过 Feign 调用）
+     * 异步发送日志到 MQ
      */
     @Async
     public void saveLogAsync(com.epidemic.common.entity.OperateLog operateLog) {
         try {
-            logFeignClient.saveLog(operateLog);
+            logMQProducer.sendLog(operateLog);
         } catch (Exception e) {
-            // 记录日志失败不影响业务
-            System.err.println("保存操作日志失败: " + e.getMessage());
+            System.err.println("发送操作日志失败: " + e.getMessage());
         }
     }
 
@@ -116,13 +115,10 @@ public class OperateLogAspect {
     /**
      * 获取方法上的 @OperateLog 注解
      */
-    private com.epidemic.pandemic.annotation.OperateLog getMethodAnnotation(ProceedingJoinPoint joinPoint) throws NoSuchMethodException {
+    private com.epidemic.common.annotation.OperateLog getMethodAnnotation(ProceedingJoinPoint joinPoint) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
-        // 如果是代理类，需要获取目标类的方法
-        Method currentMethod = joinPoint.getTarget().getClass()
-                .getMethod(method.getName(), method.getParameterTypes());
-        return currentMethod.getAnnotation(com.epidemic.pandemic.annotation.OperateLog.class);
+        return method.getAnnotation(com.epidemic.common.annotation.OperateLog.class);
     }
 
     /**
@@ -163,7 +159,6 @@ public class OperateLogAspect {
 
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < paramNames.length; i++) {
-            // 跳过 HttpServletRequest 和 Response 参数
             if (args[i] instanceof HttpServletRequest) {
                 continue;
             }
@@ -174,7 +169,7 @@ public class OperateLogAspect {
             if (argStr.contains("HttpServlet")) {
                 continue;
             }
-            // 敏感参数过滤（密码等）
+            // 敏感参数过滤
             if ("password".equalsIgnoreCase(paramNames[i]) || "pwd".equalsIgnoreCase(paramNames[i])) {
                 argStr = "******";
             }
@@ -203,7 +198,6 @@ public class OperateLogAspect {
         if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
             ip = request.getRemoteAddr();
         }
-        // 多个代理的情况，取第一个 IP
         if (ip != null && ip.contains(",")) {
             ip = ip.split(",")[0].trim();
         }

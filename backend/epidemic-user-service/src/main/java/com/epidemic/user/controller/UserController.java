@@ -2,7 +2,7 @@ package com.epidemic.user.controller;
 
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
-import com.epidemic.user.annotation.OperateLog;
+import com.epidemic.common.annotation.OperateLog;
 import com.epidemic.user.entity.User;
 import com.epidemic.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
