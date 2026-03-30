@@ -3,6 +3,7 @@ package com.epidemic.material.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.epidemic.material.dto.InventoryLogQueryDTO;
 import com.epidemic.material.entity.InventoryLog;
 import com.epidemic.material.mapper.InventoryLogMapper;
 import com.epidemic.material.service.CacheService;
@@ -10,6 +11,7 @@ import com.epidemic.material.service.InventoryLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -133,13 +135,13 @@ public class InventoryLogServiceImpl extends ServiceImpl<InventoryLogMapper, Inv
     }
 
     @Override
-    public Page<InventoryLog> getLogList(Integer page, Integer size, String materialId, String type, LocalDateTime startTime, LocalDateTime endTime) {
-        Page<InventoryLog> pageParam = new Page<>(page, size);
+    public Page<InventoryLog> getLogList(InventoryLogQueryDTO queryDTO) {
+        Page<InventoryLog> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getSize());
         LambdaQueryWrapper<InventoryLog> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(materialId != null, InventoryLog::getMaterialId, materialId)
-               .eq(type != null, InventoryLog::getChangeType, type)
-               .ge(startTime != null, InventoryLog::getOperateTime, startTime)
-               .le(endTime != null, InventoryLog::getOperateTime, endTime)
+        wrapper.eq(StringUtils.hasText(queryDTO.getMaterialId()), InventoryLog::getMaterialId, queryDTO.getMaterialId())
+               .eq(StringUtils.hasText(queryDTO.getType()), InventoryLog::getChangeType, queryDTO.getType())
+               .ge(queryDTO.getStartTime() != null, InventoryLog::getOperateTime, queryDTO.getStartTime())
+               .le(queryDTO.getEndTime() != null, InventoryLog::getOperateTime, queryDTO.getEndTime())
                .orderByDesc(InventoryLog::getOperateTime);
         return page(pageParam, wrapper);
     }

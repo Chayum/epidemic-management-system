@@ -1,12 +1,12 @@
 package com.epidemic.user.controller;
 
+import com.epidemic.common.dto.OperateLogQueryDTO;
 import com.epidemic.common.entity.OperateLog;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import com.epidemic.user.service.OperateLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -54,14 +54,8 @@ public class OperateLogController {
      */
     @Operation(summary = "分页查询操作日志")
     @GetMapping("/list")
-    public Result<PageResult<OperateLog>> getLogList(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String username,
-            @RequestParam(required = false) String module,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-        var result = operateLogService.getLogList(page, size, username, module, startTime, endTime);
-        return Result.success(new PageResult<>(result.getRecords(), result.getTotal(), page, size));
+    public Result<PageResult<OperateLog>> getLogList(@ModelAttribute OperateLogQueryDTO queryDTO) {
+        var result = operateLogService.getLogList(queryDTO);
+        return Result.success(new PageResult<>(result.getRecords(), result.getTotal(), queryDTO.getPage(), queryDTO.getSize()));
     }
 }

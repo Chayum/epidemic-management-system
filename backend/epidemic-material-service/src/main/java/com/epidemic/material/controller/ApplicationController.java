@@ -32,24 +32,12 @@ public class ApplicationController {
 
     /**
      * 获取申请列表
-     * @param page 页码，默认为1
-     * @param size 每页大小，默认为10
-     * @param status 申请状态（可选）
-     * @param applicantName 申请人姓名（可选）
+     * @param queryDTO 查询参数
      * @return 分页后的申请列表
      */
     @Operation(summary = "获取申请列表")
     @GetMapping("/list")
-    public Result<PageResult<ApplicationVO>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String applicantName) {
-        ApplicationQueryDTO queryDTO = new ApplicationQueryDTO();
-        queryDTO.setPage(page);
-        queryDTO.setSize(size);
-        queryDTO.setStatus(status);
-        queryDTO.setApplicantName(applicantName);
+    public Result<PageResult<ApplicationVO>> list(@ModelAttribute ApplicationQueryDTO queryDTO) {
         return Result.success(applicationService.getApplicationList(queryDTO));
     }
 
@@ -115,24 +103,13 @@ public class ApplicationController {
 
     /**
      * 获取我的申请列表
-     * @param page 页码
-     * @param size 每页大小
-     * @param status 申请状态
-     * @param userIdStr 用户ID
+     * @param queryDTO 查询参数
      * @return 当前用户的申请列表
      */
     @Operation(summary = "获取我的申请")
     @GetMapping("/my")
-    public Result<PageResult<ApplicationVO>> myApplications(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String status) {
-        Long userId = UserContext.getUserId();
-        ApplicationQueryDTO queryDTO = new ApplicationQueryDTO();
-        queryDTO.setPage(page);
-        queryDTO.setSize(size);
-        queryDTO.setStatus(status);
-        queryDTO.setApplicantId(userId);
+    public Result<PageResult<ApplicationVO>> myApplications(@ModelAttribute ApplicationQueryDTO queryDTO) {
+        queryDTO.setApplicantId(UserContext.getUserId());
         return Result.success(applicationService.getMyApplications(queryDTO));
     }
 

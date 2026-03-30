@@ -1,12 +1,12 @@
 package com.epidemic.common.feign;
 
+import com.epidemic.common.dto.OperateLogQueryDTO;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import com.epidemic.common.entity.OperateLog;
@@ -29,10 +29,9 @@ public class LogFeignClientFallbackFactory implements FallbackFactory<LogFeignCl
             }
 
             @Override
-            public Result<PageResult<OperateLog>> getLogList(Integer page, Integer size, String username,
-                                                               String module, LocalDateTime startTime, LocalDateTime endTime) {
-                log.warn("Feign client: getLogList fallback, page={}, size={}", page, size);
-                return Result.success(new PageResult<>(new ArrayList<>(), 0L, page, size));
+            public Result<PageResult<OperateLog>> getLogList(OperateLogQueryDTO queryDTO) {
+                log.warn("Feign client: getLogList fallback, page={}, size={}", queryDTO.getPage(), queryDTO.getSize());
+                return Result.success(new PageResult<>(new ArrayList<>(), 0L, queryDTO.getPage(), queryDTO.getSize()));
             }
         };
     }

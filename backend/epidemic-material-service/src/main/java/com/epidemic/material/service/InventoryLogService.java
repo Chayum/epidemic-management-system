@@ -2,9 +2,8 @@ package com.epidemic.material.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.epidemic.material.dto.InventoryLogQueryDTO;
 import com.epidemic.material.entity.InventoryLog;
-
-import java.time.LocalDateTime;
 
 import java.util.Map;
 
@@ -48,13 +47,8 @@ public interface InventoryLogService extends IService<InventoryLog> {
 
     /**
      * 分页查询日志
-     * @param page 页码
-     * @param size 每页大小
-     * @param materialId 物资ID
-     * @param type 变动类型
-     * @param startTime 开始时间
-     * @param endTime 结束时间
+     * @param queryDTO 查询参数
      * @return 分页结果
      */
-    Page<InventoryLog> getLogList(Integer page, Integer size, String materialId, String type, LocalDateTime startTime, LocalDateTime endTime);
+    Page<InventoryLog> getLogList(InventoryLogQueryDTO queryDTO);
 }

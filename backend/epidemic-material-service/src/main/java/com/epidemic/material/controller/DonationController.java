@@ -31,34 +31,13 @@ public class DonationController {
 
 
     /**
-     * 获取捐赠列表
-     * @param page 页码，默认为1
-     * @param size 每页大小，默认为10
-     * @param status 捐赠状态（可选）
-     * @param donorUnit 捐赠单位（可选）
-     * @param donorId 捐赠人ID（可选）
-     * @param type 捐赠类型（可选）
-     * @param id 捐赠ID（可选）
-     * @return 分页后的捐赠列表
+     *  获取捐赠列表
+     * @param queryDTO
+     * @return
      */
     @Operation(summary = "获取捐赠列表")
     @GetMapping("/list")
-    public Result<PageResult<DonationVO>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String donorUnit,
-            @RequestParam(required = false) Long donorId,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String id) {
-        DonationQueryDTO queryDTO = new DonationQueryDTO();
-        queryDTO.setPage(page);
-        queryDTO.setSize(size);
-        queryDTO.setStatus(status);
-        queryDTO.setDonorUnit(donorUnit);
-        queryDTO.setDonorId(donorId);
-        queryDTO.setType(type);
-        queryDTO.setId(id);
+    public Result<PageResult<DonationVO>> list(@ModelAttribute DonationQueryDTO queryDTO) {
         return Result.success(donationService.getDonationList(queryDTO));
     }
 
@@ -105,19 +84,8 @@ public class DonationController {
      */
     @Operation(summary = "获取我的捐赠")
     @GetMapping("/my")
-    public Result<PageResult<DonationVO>> myDonations(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String id) {
-        Long userId = UserContext.getUserId();
-
-        DonationQueryDTO queryDTO = new DonationQueryDTO();
-        queryDTO.setPage(page);
-        queryDTO.setSize(size);
-        queryDTO.setStatus(status);
-        queryDTO.setId(id);
-        queryDTO.setDonorId(userId);
+    public Result<PageResult<DonationVO>> myDonations(@ModelAttribute DonationQueryDTO queryDTO) {
+        queryDTO.setDonorId(UserContext.getUserId());
         return Result.success(donationService.getDonationList(queryDTO));
     }
 

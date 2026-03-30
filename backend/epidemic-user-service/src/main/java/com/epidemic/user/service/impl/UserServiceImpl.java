@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.common.result.PageResult;
+import com.epidemic.user.dto.UserQueryDTO;
 import com.epidemic.user.entity.User;
 import com.epidemic.user.mapper.UserMapper;
 import com.epidemic.user.service.UserService;
@@ -32,29 +33,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * 分页查询用户列表
      * 支持根据用户名、姓名、手机号、角色、状态进行模糊/精确组合查询
      *
-     * @param page 页码
-     * @param size 每页大小
-     * @param username 用户名（模糊）
-     * @param name 姓名（模糊）
-     * @param phone 手机号（模糊）
-     * @param role 角色
-     * @param status 状态
+     * @param queryDTO 查询参数
      * @return 分页结果对象
      */
     @Override
-    public PageResult<User> getUserList(Integer page, Integer size, String username, String name, String phone, String role, String status) {
+    public PageResult<User> getUserList(UserQueryDTO queryDTO) {
         // 构建分页参数
-        Page<User> pageParam = new Page<>(page, size);
-        
+        Page<User> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getSize());
+
         // 构建查询条件
         Page<User> resultPage = userMapper.selectPage(pageParam, new LambdaQueryWrapper<User>()
-                .like(StringUtils.hasText(username), User::getUsername, username)
-                .like(StringUtils.hasText(name), User::getName, name)
-                .like(StringUtils.hasText(phone), User::getPhone, phone)
-                .eq(StringUtils.hasText(role), User::getRole, role)   // 角色通常为精确匹配
-                .eq(StringUtils.hasText(status), User::getStatus, status) // 状态通常为精确匹配
+                .like(StringUtils.hasText(queryDTO.getUsername()), User::getUsername, queryDTO.getUsername())
+                .like(StringUtils.hasText(queryDTO.getName()), User::getName, queryDTO.getName())
+                .like(StringUtils.hasText(queryDTO.getPhone()), User::getPhone, queryDTO.getPhone())
+                .eq(StringUtils.hasText(queryDTO.getRole()), User::getRole, queryDTO.getRole())   // 角色通常为精确匹配
+                .eq(StringUtils.hasText(queryDTO.getStatus()), User::getStatus, queryDTO.getStatus()) // 状态通常为精确匹配
         );
-        return new PageResult<>(resultPage.getRecords(), resultPage.getTotal(), page, size);
+        return new PageResult<>(resultPage.getRecords(), resultPage.getTotal(), queryDTO.getPage(), queryDTO.getSize());
     }
 
     /**

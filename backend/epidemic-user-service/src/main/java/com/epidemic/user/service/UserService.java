@@ -2,6 +2,7 @@ package com.epidemic.user.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.epidemic.common.result.PageResult;
+import com.epidemic.user.dto.UserQueryDTO;
 import com.epidemic.user.entity.User;
 import org.springframework.stereotype.Service;
 
@@ -9,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface UserService extends IService<User> {
-    PageResult<User> getUserList(Integer page, Integer size, String username, String name, String phone, String role, String status);
+    PageResult<User> getUserList(UserQueryDTO queryDTO);
 
     User getUserById(Long id);
 

@@ -22,10 +22,21 @@ import java.util.Collections;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+/**
+ * JWT 认证过滤器
+ */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
 
+    /**
+     * 过滤器逻辑
+     * @param request 请求
+     * @param response 响应
+     * @param filterChain 过滤器链
+     * @throws ServletException Servlet 异常
+     * @throws IOException IO 异常
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -56,6 +67,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * 从请求中获取 JWT
+     * @param request 请求
+     * @return JWT
+     */
     private String getTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {

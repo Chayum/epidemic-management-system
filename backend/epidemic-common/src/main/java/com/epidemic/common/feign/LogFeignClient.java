@@ -1,12 +1,11 @@
 package com.epidemic.common.feign;
 
+import com.epidemic.common.dto.OperateLogQueryDTO;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import com.epidemic.common.entity.OperateLog;
 
@@ -27,12 +26,5 @@ public interface LogFeignClient {
      * 分页查询操作日志
      */
     @GetMapping("/list")
-    Result<PageResult<OperateLog>> getLogList(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String username,
-            @RequestParam(required = false) String module,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime
-    );
+    Result<PageResult<OperateLog>> getLogList(@ModelAttribute OperateLogQueryDTO queryDTO);
 }

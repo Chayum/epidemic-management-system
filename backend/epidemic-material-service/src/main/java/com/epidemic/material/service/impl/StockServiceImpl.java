@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.material.dto.StockOrderDTO;
+import com.epidemic.material.dto.StockOrderQueryDTO;
 import com.epidemic.material.entity.*;
 import com.epidemic.material.mapper.MaterialCostMapper;
 import com.epidemic.material.mapper.StockOrderItemMapper;
@@ -314,12 +315,12 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
     }
 
     @Override
-    public Page<StockOrder> getOrderList(Integer page, Integer size, String type, String status, String keyword) {
-        Page<StockOrder> pageParam = new Page<>(page, size);
+    public Page<StockOrder> getOrderList(StockOrderQueryDTO queryDTO) {
+        Page<StockOrder> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getSize());
         LambdaQueryWrapper<StockOrder> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StringUtils.hasText(type), StockOrder::getType, type)
-               .eq(StringUtils.hasText(status), StockOrder::getStatus, status)
-               .like(StringUtils.hasText(keyword), StockOrder::getId, keyword) // 简单按ID搜，也可关联查询
+        wrapper.eq(StringUtils.hasText(queryDTO.getType()), StockOrder::getType, queryDTO.getType())
+               .eq(StringUtils.hasText(queryDTO.getStatus()), StockOrder::getStatus, queryDTO.getStatus())
+               .like(StringUtils.hasText(queryDTO.getKeyword()), StockOrder::getId, queryDTO.getKeyword()) // 简单按ID搜，也可关联查询
                .orderByDesc(StockOrder::getCreateTime);
         return page(pageParam, wrapper);
     }

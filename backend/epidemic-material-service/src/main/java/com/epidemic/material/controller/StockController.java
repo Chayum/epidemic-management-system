@@ -5,7 +5,9 @@ import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import com.epidemic.common.util.UserContext;
 import com.epidemic.common.annotation.OperateLog;
+import com.epidemic.material.dto.InventoryLogQueryDTO;
 import com.epidemic.material.dto.StockOrderDTO;
+import com.epidemic.material.dto.StockOrderQueryDTO;
 import com.epidemic.material.entity.InventoryLog;
 import com.epidemic.material.entity.StockOrder;
 import com.epidemic.material.service.InventoryLogService;
@@ -14,10 +16,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDateTime;
 
 import com.epidemic.material.vo.InventoryLedgerVO;
 
@@ -70,24 +69,15 @@ public class StockController {
 
     @Operation(summary = "查询单据列表")
     @GetMapping("/order/list")
-    public Result<PageResult<StockOrder>> getOrderList(@RequestParam(defaultValue = "1") Integer page,
-                                                       @RequestParam(defaultValue = "10") Integer size,
-                                                       @RequestParam(required = false) String type,
-                                                       @RequestParam(required = false) String status,
-                                                       @RequestParam(required = false) String keyword) {
-        Page<StockOrder> result = stockService.getOrderList(page, size, type, status, keyword);
-        return Result.success(new PageResult<>(result.getRecords(), result.getTotal(), page, size));
+    public Result<PageResult<StockOrder>> getOrderList(@ModelAttribute StockOrderQueryDTO queryDTO) {
+        Page<StockOrder> result = stockService.getOrderList(queryDTO);
+        return Result.success(new PageResult<>(result.getRecords(), result.getTotal(), queryDTO.getPage(), queryDTO.getSize()));
     }
 
     @Operation(summary = "查询库存变动日志")
     @GetMapping("/log/list")
-    public Result<PageResult<InventoryLog>> getLogList(@RequestParam(defaultValue = "1") Integer page,
-                                                       @RequestParam(defaultValue = "10") Integer size,
-                                                       @RequestParam(required = false) String materialId,
-                                                       @RequestParam(required = false) String type,
-                                                       @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
-                                                       @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
-        Page<InventoryLog> result = inventoryLogService.getLogList(page, size, materialId, type, startTime, endTime);
-        return Result.success(new PageResult<>(result.getRecords(), result.getTotal(), page, size));
+    public Result<PageResult<InventoryLog>> getLogList(@ModelAttribute InventoryLogQueryDTO queryDTO) {
+        Page<InventoryLog> result = inventoryLogService.getLogList(queryDTO);
+        return Result.success(new PageResult<>(result.getRecords(), result.getTotal(), queryDTO.getPage(), queryDTO.getSize()));
     }
 }

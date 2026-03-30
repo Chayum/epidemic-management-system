@@ -3,6 +3,7 @@ package com.epidemic.material.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.epidemic.material.dto.StockOrderDTO;
+import com.epidemic.material.dto.StockOrderQueryDTO;
 import com.epidemic.material.entity.StockOrder;
 
 import com.epidemic.material.vo.InventoryLedgerVO;
@@ -49,12 +50,8 @@ public interface StockService extends IService<StockOrder> {
 
     /**
      * 分页查询单据
-     * @param page 页码
-     * @param size 每页大小
-     * @param type 类型
-     * @param status 状态
-     * @param keyword 关键字
+     * @param queryDTO 查询参数
      * @return 分页结果
      */
-    Page<StockOrder> getOrderList(Integer page, Integer size, String type, String status, String keyword);
+    Page<StockOrder> getOrderList(StockOrderQueryDTO queryDTO);
 }

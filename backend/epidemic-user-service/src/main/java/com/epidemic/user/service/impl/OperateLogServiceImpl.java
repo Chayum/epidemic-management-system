@@ -3,12 +3,13 @@ package com.epidemic.user.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.epidemic.common.dto.OperateLogQueryDTO;
 import com.epidemic.common.entity.OperateLog;
 import com.epidemic.user.mapper.OperateLogMapper;
 import com.epidemic.user.service.OperateLogService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -26,22 +27,21 @@ public class OperateLogServiceImpl extends ServiceImpl<OperateLogMapper, Operate
     }
 
     @Override
-    public Page<OperateLog> getLogList(Integer page, Integer size, String username, String module,
-                                       LocalDateTime startTime, LocalDateTime endTime) {
-        Page<OperateLog> pageParam = new Page<>(page, size);
+    public Page<OperateLog> getLogList(OperateLogQueryDTO queryDTO) {
+        Page<OperateLog> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getSize());
         LambdaQueryWrapper<OperateLog> wrapper = new LambdaQueryWrapper<>();
 
-        if (username != null && !username.isEmpty()) {
-            wrapper.like(OperateLog::getUsername, username);
+        if (StringUtils.hasText(queryDTO.getUsername())) {
+            wrapper.like(OperateLog::getUsername, queryDTO.getUsername());
         }
-        if (module != null && !module.isEmpty()) {
-            wrapper.eq(OperateLog::getModule, module);
+        if (StringUtils.hasText(queryDTO.getModule())) {
+            wrapper.eq(OperateLog::getModule, queryDTO.getModule());
         }
-        if (startTime != null) {
-            wrapper.ge(OperateLog::getOperateTime, startTime);
+        if (queryDTO.getStartTime() != null) {
+            wrapper.ge(OperateLog::getOperateTime, queryDTO.getStartTime());
         }
-        if (endTime != null) {
-            wrapper.le(OperateLog::getOperateTime, endTime);
+        if (queryDTO.getEndTime() != null) {
+            wrapper.le(OperateLog::getOperateTime, queryDTO.getEndTime());
         }
 
         wrapper.orderByDesc(OperateLog::getOperateTime);

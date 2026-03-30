@@ -3,6 +3,7 @@ package com.epidemic.user.controller;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import com.epidemic.common.annotation.OperateLog;
+import com.epidemic.user.dto.UserQueryDTO;
 import com.epidemic.user.entity.User;
 import com.epidemic.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,26 +25,12 @@ public class UserController {
 
     /**
      * 获取用户列表
-     * @param page 页码，默认为1
-     * @param size 每页大小，默认为10
-     * @param username 用户名（可选，模糊查询）
-     * @param name 姓名（可选，模糊查询）
-     * @param phone 电话（可选，模糊查询）
-     * @param role 角色（可选）
-     * @param status 状态（可选）
+     * @param queryDTO 查询参数
      * @return 分页后的用户列表
      */
     @GetMapping("/list")
-    public Result<PageResult<User>> list(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String username,
-            @RequestParam(required = false) String name,
-            @RequestParam(required = false) String phone,
-            @RequestParam(required = false) String role,
-            @RequestParam(required = false) String status) {
-        PageResult<User> result = userService.getUserList(page, size, username, name, phone, role, status);
-        return Result.success(result);
+    public Result<PageResult<User>> list(@ModelAttribute UserQueryDTO queryDTO) {
+        return Result.success(userService.getUserList(queryDTO));
     }
 
     /**

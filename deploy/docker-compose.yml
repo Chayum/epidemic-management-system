@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  gateway:
+    build: ./gateway
+    container_name: epidemic-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_GATEWAY.routes
+    restart: always
+    networks:
+      - epidemic-net
+
+  user-service:
+    build: ./user-service
+    container_name: epidemic-user-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    restart: always
+    networks:
+      - epidemic-net
+
+  material-service:
+    build: ./material-service
+    container_name: epidemic-material-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    restart: always
+    networks:
+      - epidemic-net
+
+  pandemic-service:
+    build: ./pandemic-service
+    container_name: epidemic-pandemic-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    restart: always
+    networks:
+      - epidemic-net
+
+  nginx:
+    build: ./nginx
+    container_name: epidemic-nginx
+    ports:
+      - "80:80"
+    restart: always
+    networks:
+      - epidemic-net
+
+networks:
+  epidemic-net:
+    driver: bridge
