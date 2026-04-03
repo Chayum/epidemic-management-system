@@ -265,16 +265,15 @@ const loadDashboardData = async () => {
         ip: log.ip || ''
       }))
 
-      // 更新趋势图
-      if (data.trendData) {
-        updateTrendChart(data.trendData)
-      }
+      // 注意：趋势图由 loadTrendData() 单独管理，这里不再更新
     }
   } catch (error) {
     console.error('加载仪表盘数据失败:', error)
   } finally {
     loading.value = false
   }
+
+  // 趋势图由 loadTrendData() 单独更新，不在这里处理
 
   // 并行加载待审核申请
   try {
@@ -388,7 +387,7 @@ const updateTrendChart = (trendData) => {
     ]
   }
 
-  trendChart.setOption(option)
+  trendChart.setOption(option, { replaceMerge: ['series'] })
 }
 
 /**
@@ -444,15 +443,18 @@ const initPieChart = async () => {
       textStyle: { color: '#1f2937' }
     },
     legend: {
-      bottom: '5%',
+      bottom: '0%',
       left: 'center',
-      textStyle: { color: '#6b7280' }
+      top: '75%',
+      textStyle: { color: '#6b7280' },
+      itemGap: 20
     },
     series: [
       {
         name: '物资类型',
         type: 'pie',
-        radius: ['40%', '70%'],
+        radius: ['35%', '60%'],
+        center: ['50%', '45%'],
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 10,
@@ -476,6 +478,10 @@ const initPieChart = async () => {
  * 手动刷新
  */
 const refreshData = () => {
+  // 确保图表已初始化
+  if (!trendChart && trendChartRef.value) {
+    initTrendChart()
+  }
   loadDashboardData()
   loadTrendData()
 }
@@ -534,12 +540,16 @@ const getStockPercentage = (item) => {
 // ===== 生命周期 =====
 
 onMounted(() => {
-  loadDashboardData()
   initTrendChart()
+  loadDashboardData()
+  loadTrendData()
   initPieChart()
 
-  // 30 秒自动刷新整体数据
-  refreshTimer = setInterval(loadDashboardData, 30000)
+  // 30 秒自动刷新整体数据（包含趋势图）
+  refreshTimer = setInterval(() => {
+    loadDashboardData()
+    loadTrendData()
+  }, 30000)
 
   // 10 秒高频刷新库存预警
   warningTimer = setInterval(loadWarningList, 10000)

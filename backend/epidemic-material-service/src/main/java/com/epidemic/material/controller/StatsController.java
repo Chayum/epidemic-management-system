@@ -185,41 +185,45 @@ public class StatsController {
         } else {
             start = end.minusWeeks(1);
         }
-        
+
         String startDateStr = start.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        
-        // 获取原始统计数据
-        List<Map<String, Object>> inboundList = donationService.getTrendData(startDateStr);
-        List<Map<String, Object>> outboundList = applicationService.getTrendData(startDateStr);
-        
+        String endDateStr = end.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        // 从 inventory_log 获取出入库数据
+        Map<String, List<Map<String, Object>>> trendDataMap = inventoryLogService.getTrendDataByDateRange(startDateStr, endDateStr);
+        List<Map<String, Object>> inboundList = trendDataMap.get("inbound");
+        List<Map<String, Object>> outboundList = trendDataMap.get("outbound");
+
         // 数据预处理：转为 Map<日期, 数量> 方便查找
         List<String> dates = new ArrayList<>();
         List<Integer> inbound = new ArrayList<>();
         List<Integer> outbound = new ArrayList<>();
-        
+
         Map<String, Integer> inboundMap = inboundList != null ? inboundList.stream().collect(Collectors.toMap(
             m -> (String) m.get("date"),
-            m -> ((Number) m.get("count")).intValue()
+            m -> ((Number) m.get("count")).intValue(),
+            Integer::sum
         )) : new HashMap<>();
-        
+
         Map<String, Integer> outboundMap = outboundList != null ? outboundList.stream().collect(Collectors.toMap(
             m -> (String) m.get("date"),
-            m -> ((Number) m.get("count")).intValue()
+            m -> ((Number) m.get("count")).intValue(),
+            Integer::sum
         )) : new HashMap<>();
-        
+
         // 补全日期并填充数据
-        for (LocalDate date = start.plusDays(1); !date.isAfter(end); date = date.plusDays(1)) {
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
             String dateStr = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             dates.add(dateStr);
             inbound.add(inboundMap.getOrDefault(dateStr, 0));
             outbound.add(outboundMap.getOrDefault(dateStr, 0));
         }
-        
+
         Map<String, Object> data = new HashMap<>();
         data.put("dates", dates);
         data.put("inbound", inbound);
         data.put("outbound", outbound);
-        
+
         return Result.success("获取成功", data);
     }
 

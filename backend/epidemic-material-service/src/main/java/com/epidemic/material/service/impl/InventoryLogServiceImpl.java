@@ -16,9 +16,12 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 库存变动日志服务实现类
@@ -94,17 +97,17 @@ public class InventoryLogServiceImpl extends ServiceImpl<InventoryLogMapper, Inv
         LocalDateTime dayStart = LocalDateTime.of(date, LocalTime.MIN);
         LocalDateTime dayEnd = LocalDateTime.of(date, LocalTime.MAX);
 
-        // 统计入库
+        // 统计入库 (change_type = 'in')
         List<InventoryLog> inboundLogs = list(new LambdaQueryWrapper<InventoryLog>()
-                .eq(InventoryLog::getChangeType, "inbound")
+                .eq(InventoryLog::getChangeType, "in")
                 .ge(InventoryLog::getOperateTime, dayStart)
                 .le(InventoryLog::getOperateTime, dayEnd));
         int inboundCount = inboundLogs.stream().mapToInt(InventoryLog::getChangeQuantity).sum();
         stats.put("todayInbound", inboundCount);
 
-        // 统计出库
+        // 统计出库 (change_type = 'out')
         List<InventoryLog> outboundLogs = list(new LambdaQueryWrapper<InventoryLog>()
-                .eq(InventoryLog::getChangeType, "outbound")
+                .eq(InventoryLog::getChangeType, "out")
                 .ge(InventoryLog::getOperateTime, dayStart)
                 .le(InventoryLog::getOperateTime, dayEnd));
         int outboundCount = outboundLogs.stream().mapToInt(l -> Math.abs(l.getChangeQuantity())).sum();
@@ -144,5 +147,65 @@ public class InventoryLogServiceImpl extends ServiceImpl<InventoryLogMapper, Inv
                .le(queryDTO.getEndTime() != null, InventoryLog::getOperateTime, queryDTO.getEndTime())
                .orderByDesc(InventoryLog::getOperateTime);
         return page(pageParam, wrapper);
+    }
+
+    @Override
+    public Map<String, List<Map<String, Object>>> getTrendDataByDateRange(String startDate, String endDate) {
+        Map<String, List<Map<String, Object>>> result = new HashMap<>();
+
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        LocalDateTime startTime = start.atStartOfDay();
+        LocalDateTime endTime = end.atTime(LocalTime.MAX);
+
+        // 查询入库数据 (change_type = 'in')
+        List<InventoryLog> inboundLogs = list(new LambdaQueryWrapper<InventoryLog>()
+                .eq(InventoryLog::getChangeType, "in")
+                .ge(InventoryLog::getOperateTime, startTime)
+                .le(InventoryLog::getOperateTime, endTime));
+
+        // 查询出库数据 (change_type = 'out')
+        List<InventoryLog> outboundLogs = list(new LambdaQueryWrapper<InventoryLog>()
+                .eq(InventoryLog::getChangeType, "out")
+                .ge(InventoryLog::getOperateTime, startTime)
+                .le(InventoryLog::getOperateTime, endTime));
+
+        // 按日期分组统计
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        Map<String, Integer> inboundMap = inboundLogs.stream()
+                .collect(Collectors.groupingBy(
+                        log -> log.getOperateTime().format(formatter),
+                        Collectors.summingInt(InventoryLog::getChangeQuantity)
+                ));
+
+        Map<String, Integer> outboundMap = outboundLogs.stream()
+                .collect(Collectors.groupingBy(
+                        log -> log.getOperateTime().format(formatter),
+                        Collectors.summingInt(log -> Math.abs(log.getChangeQuantity()))
+                ));
+
+        // 转换为接口需要的格式
+        List<Map<String, Object>> inboundList = new ArrayList<>();
+        List<Map<String, Object>> outboundList = new ArrayList<>();
+
+        for (Map.Entry<String, Integer> entry : inboundMap.entrySet()) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("date", entry.getKey());
+            item.put("count", entry.getValue());
+            inboundList.add(item);
+        }
+
+        for (Map.Entry<String, Integer> entry : outboundMap.entrySet()) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("date", entry.getKey());
+            item.put("count", entry.getValue());
+            outboundList.add(item);
+        }
+
+        result.put("inbound", inboundList);
+        result.put("outbound", outboundList);
+
+        return result;
     }
 }

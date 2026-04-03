@@ -7,11 +7,6 @@
           <span class="logo-text">防疫物资调度系统</span>
         </div>
         <div class="header-right">
-          <div class="notification-bell" @click="goToNotification">
-            <el-badge :value="unreadCount" :max="99" :hidden="unreadCount === 0">
-              <el-icon :size="24"><Bell /></el-icon>
-            </el-badge>
-          </div>
           <el-menu
             mode="horizontal"
             :default-active="activeMenu"
@@ -27,9 +22,11 @@
           </el-menu>
           <el-dropdown @command="handleCommand">
             <div class="user-info">
-              <el-avatar :size="36" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
-                {{ userInfo.name?.charAt(0) || '用' }}
-              </el-avatar>
+              <el-badge :value="unreadCount" :max="99" :hidden="unreadCount === 0" :offset="[-6, 6]">
+                <el-avatar :size="36" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+                  {{ userInfo.name?.charAt(0) || '用' }}
+                </el-avatar>
+              </el-badge>
               <span class="username">{{ userInfo.name || '用户' }}</span>
               <el-icon><ArrowDown /></el-icon>
             </div>
@@ -39,7 +36,9 @@
                   <el-icon><User /></el-icon>个人中心
                 </el-dropdown-item>
                 <el-dropdown-item command="notification">
-                  <el-icon><Bell /></el-icon>消息通知
+                  <el-badge :value="unreadCount" :max="99" :hidden="unreadCount === 0" :offset="[10, 0]">
+                    <el-icon><Bell /></el-icon>消息通知
+                  </el-badge>
                 </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon>退出登录
@@ -95,10 +94,6 @@ const fetchUnreadCount = async () => {
   } catch (error) {
     console.error('获取未读通知数量失败', error)
   }
-}
-
-const goToNotification = () => {
-  router.push('/user/notification')
 }
 
 const handleCommand = (command) => {

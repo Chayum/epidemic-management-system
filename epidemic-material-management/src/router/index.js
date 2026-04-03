@@ -68,6 +68,12 @@ const routes = [
         name: 'UserProfile',
         component: () => import('@/views/user/profile.vue'),
         meta: { title: '个人中心', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user'] }
+      },
+      {
+        path: 'track',
+        name: 'UserTrack',
+        component: () => import('@/views/material/track.vue'),
+        meta: { title: '物流追踪', requiresAuth: true, roles: ['hospital_user', 'community_staff'] }
       }
     ]
   },

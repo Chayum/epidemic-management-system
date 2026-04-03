@@ -105,10 +105,6 @@
                   <el-icon><User /></el-icon>
                   <span>个人信息</span>
                 </el-dropdown-item>
-                <el-dropdown-item command="settings">
-                  <el-icon><Setting /></el-icon>
-                  <span>系统设置</span>
-                </el-dropdown-item>
                 <el-dropdown-item divided command="logout">
                   <el-icon><SwitchButton /></el-icon>
                   <span>退出登录</span>

@@ -10,8 +10,10 @@ import com.epidemic.material.dto.ApplicationApproveDTO;
 import com.epidemic.material.dto.ApplicationQueryDTO;
 import com.epidemic.material.dto.ApplicationSubmitDTO;
 import com.epidemic.material.entity.Application;
+import com.epidemic.material.entity.ApplicationTrack;
 import com.epidemic.material.entity.Material;
 import com.epidemic.material.mapper.ApplicationMapper;
+import com.epidemic.material.mapper.ApplicationTrackMapper;
 import com.epidemic.material.mapper.MaterialMapper;
 import com.epidemic.material.service.ApplicationService;
 import com.epidemic.material.service.CacheService;
@@ -51,6 +53,9 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
 
     @Autowired
     private CacheService cacheService;
+
+    @Autowired
+    private ApplicationTrackMapper applicationTrackMapper;
 
     /**
      * 分页查询申请列表
@@ -115,6 +120,10 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
         
         // 4. 保存到数据库
         baseMapper.insert(application);
+
+        // 5. 插入追踪记录
+        addTrackRecord(application.getId(), "pending", "提交物资申请，等待审核", applicantId, applicantName);
+
         log.info("用户[{}]提交了物资申请: {}", applicantId, application.getId());
     }
 
@@ -177,7 +186,13 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
         application.setApproverId(approverId);
         application.setApproverName(approverName);
         baseMapper.updateById(application);
-        
+
+        // 添加追踪记录
+        String trackDesc = "approved".equals(approveDTO.getStatus())
+                ? "审核通过，物资准备出库"
+                : "审核驳回: " + approveDTO.getRemark();
+        addTrackRecord(application.getId(), approveDTO.getStatus(), trackDesc, approverId, approverName);
+
         // 清除申请单状态缓存
         cacheService.deleteApplicationStatus(application.getId());
         log.info("管理员 [{}] 审批了物资申请：{}, 结果：{}, 已清除缓存", approverId, application.getId(), approveDTO.getStatus());
@@ -206,6 +221,10 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
         
         application.setStatus("cancelled");
         baseMapper.updateById(application);
+
+        // 添加追踪记录
+        addTrackRecord(applicationId, "cancelled", "申请人取消申请", userId, application.getApplicantName());
+
         log.info("用户[{}]取消了物资申请: {}", userId, applicationId);
     }
 
@@ -238,8 +257,8 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
     }
 
     /**
-     * 获取物流追踪信息（模拟）
-     * 根据申请状态生成对应的物流节点信息
+     * 获取物流追踪信息
+     * 从 application_track 表读取真实的追踪记录
      *
      * @param applicationId 申请单ID
      * @return 物流追踪信息Map
@@ -248,43 +267,27 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
     public Map<String, Object> getTrackInfo(String applicationId) {
         Map<String, Object> trackInfo = new HashMap<>();
         trackInfo.put("applicationId", applicationId);
-        
+
         Application application = baseMapper.selectById(applicationId);
         if (application == null) {
             throw new BusinessException("申请单不存在");
         }
-        
+
         trackInfo.put("status", application.getStatus());
-        
+
+        // 从数据库读取真实的追踪记录
+        List<ApplicationTrack> trackList = applicationTrackMapper.selectByApplicationId(applicationId);
+
         List<Map<String, Object>> tracks = new ArrayList<>();
-        
-        // 节点1：提交记录
-        Map<String, Object> track1 = new HashMap<>();
-        track1.put("time", application.getApplyTime());
-        track1.put("status", "submitted");
-        track1.put("description", "申请已提交，等待审核");
-        tracks.add(track1);
-        
-        // 节点2：审批记录（若已审批）
-        if (application.getApproveTime() != null) {
-            Map<String, Object> track2 = new HashMap<>();
-            track2.put("time", application.getApproveTime());
-            String status = application.getStatus();
-            track2.put("status", status);
-            String desc = "approved".equals(status) ? "审核通过，物资准备出库" : "审核驳回: " + application.getApproveRemark();
-            track2.put("description", desc);
-            tracks.add(track2);
-            
-            // 节点3：发货记录（模拟，仅当审核通过时存在）
-            if ("approved".equals(status)) {
-                Map<String, Object> track3 = new HashMap<>();
-                track3.put("time", LocalDateTime.now()); // 模拟发货时间为当前时间
-                track3.put("status", "shipped");
-                track3.put("description", "物资已出库，正在配送中");
-                tracks.add(track3);
-            }
+        for (ApplicationTrack track : trackList) {
+            Map<String, Object> trackMap = new HashMap<>();
+            trackMap.put("time", track.getOperateTime());
+            trackMap.put("status", track.getStatus());
+            trackMap.put("description", track.getDescription());
+            trackMap.put("operator", track.getOperatorName());
+            tracks.add(trackMap);
         }
-        
+
         trackInfo.put("tracks", tracks);
         return trackInfo;
     }
@@ -346,5 +349,25 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
             log.error("获取受益人数失败", e);
             return 0;
         }
+    }
+
+    /**
+     * 添加追踪记录
+     *
+     * @param applicationId 申请单号
+     * @param status 状态
+     * @param description 描述
+     * @param operatorId 操作人ID
+     * @param operatorName 操作人姓名
+     */
+    private void addTrackRecord(String applicationId, String status, String description, Long operatorId, String operatorName) {
+        ApplicationTrack track = new ApplicationTrack();
+        track.setApplicationId(applicationId);
+        track.setStatus(status);
+        track.setDescription(description);
+        track.setOperatorId(operatorId);
+        track.setOperatorName(operatorName);
+        track.setOperateTime(LocalDateTime.now());
+        applicationTrackMapper.insert(track);
     }
 }

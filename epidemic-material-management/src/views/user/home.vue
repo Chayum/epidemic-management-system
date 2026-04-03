@@ -20,9 +20,9 @@
         </div>
       </el-col>
     </el-row>
-    
+
     <el-row :gutter="20">
-      <el-col :xs="24" :lg="16">
+      <el-col :span="24">
         <div class="card-container">
           <div class="card-header">
             <h3>快速操作</h3>
@@ -38,7 +38,7 @@
               </div>
               <el-icon class="action-arrow"><ArrowRight /></el-icon>
             </div>
-            
+
             <div class="action-card" @click="$router.push('/user/apply')">
               <div class="action-icon" style="background: #f6ffed;">
                 <el-icon :size="32" color="#52c41a"><ShoppingCart /></el-icon>
@@ -49,7 +49,7 @@
               </div>
               <el-icon class="action-arrow"><ArrowRight /></el-icon>
             </div>
-            
+
             <div class="action-card" @click="$router.push('/user/my-application')">
               <div class="action-icon" style="background: #fff7e6;">
                 <el-icon :size="32" color="#fa8c16"><Document /></el-icon>
@@ -60,7 +60,7 @@
               </div>
               <el-icon class="action-arrow"><ArrowRight /></el-icon>
             </div>
-            
+
             <div class="action-card" @click="$router.push('/user/my-donation')">
               <div class="action-icon" style="background: #fff1f0;">
                 <el-icon :size="32" color="#f5222d"><Medal /></el-icon>
@@ -71,9 +71,24 @@
               </div>
               <el-icon class="action-arrow"><ArrowRight /></el-icon>
             </div>
+
+            <div class="action-card" @click="$router.push('/user/track')">
+              <div class="action-icon" style="background: #f0f5ff;">
+                <el-icon :size="32" color="#722ed1"><Goods /></el-icon>
+              </div>
+              <div class="action-info">
+                <div class="action-title">物流追踪</div>
+                <div class="action-desc">追踪物资配送进度</div>
+              </div>
+              <el-icon class="action-arrow"><ArrowRight /></el-icon>
+            </div>
           </div>
         </div>
-        
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="20">
+      <el-col :xs="24" :lg="12">
         <div class="card-container recent-section">
           <div class="card-header">
             <h3>最新疫情动态</h3>
@@ -88,8 +103,8 @@
           </div>
         </div>
       </el-col>
-      
-      <el-col :xs="24" :lg="8">
+
+      <el-col :xs="24" :lg="12">
         <div class="card-container contact-section">
           <div class="card-header">
             <h3>联系我们</h3>
@@ -244,6 +259,8 @@ onMounted(() => {
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .card-header {
@@ -312,6 +329,7 @@ onMounted(() => {
 
 .recent-section {
   margin-top: 20px;
+  min-height: 350px;
 }
 
 .news-list {
@@ -359,6 +377,7 @@ onMounted(() => {
 
 .contact-section {
   margin-top: 20px;
+  min-height: 350px;
 }
 
 .contact-list {

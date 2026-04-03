@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.epidemic.material.dto.InventoryLogQueryDTO;
 import com.epidemic.material.entity.InventoryLog;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,4 +52,12 @@ public interface InventoryLogService extends IService<InventoryLog> {
      * @return 分页结果
      */
     Page<InventoryLog> getLogList(InventoryLogQueryDTO queryDTO);
+
+    /**
+     * 获取指定日期范围的出入库趋势数据
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return Map包含 "inbound" 和 "outbound" 列表
+     */
+    Map<String, List<Map<String, Object>>> getTrendDataByDateRange(String startDate, String endDate);
 }
