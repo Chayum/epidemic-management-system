@@ -31,6 +31,9 @@ public class ApplicationVO implements Serializable {
     @Schema(description = "申请人ID")
     private Long applicantId;
 
+    @Schema(description = "申请人姓名")
+    private String applicantName;
+
     @Schema(description = "用途说明")
     private String purpose;
 

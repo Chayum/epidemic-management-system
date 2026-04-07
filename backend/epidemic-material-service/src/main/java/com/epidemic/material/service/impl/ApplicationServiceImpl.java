@@ -33,6 +33,7 @@ import com.epidemic.material.dto.StockOrderDTO;
 import com.epidemic.material.service.StockService;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.UUID;
 
 /**
  * 申请服务实现类
@@ -114,7 +115,7 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
         application.setApplicantName(applicantName);
         application.setMaterialName(material.getName());
         application.setUnit(material.getUnit() != null ? material.getUnit() : "个");
-        application.setId("A" + System.currentTimeMillis()); // 生成申请单号
+        application.setId("A" + UUID.randomUUID().toString().replace("-", "").substring(0, 16)); // 生成申请单号
         application.setStatus("pending"); // 初始状态：待审核
         application.setApplyTime(LocalDateTime.now());
         
@@ -171,11 +172,10 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
             itemDTO.setRemark(application.getPurpose());
             
             orderDTO.setItems(Collections.singletonList(itemDTO));
-            
-            String orderId = stockService.createOrder(orderDTO, approverId, approverName);
-            // 自动审核出库单
-            stockService.auditOrder(orderId, approverId, approverName, true, "自动审核申领出库");
-            
+
+            // 直接创建并自动审核出库单
+            String orderId = stockService.createOrder(orderDTO, approverId, approverName, true);
+
             log.info("申请[{}]审核通过，已生成出库单[{}]", application.getId(), orderId);
         }
         
@@ -327,28 +327,6 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
     @Override
     public List<Map<String, Object>> getTrendData(String startDate) {
         return baseMapper.countApprovedByDate(startDate);
-    }
-    
-    /**
-     * 获取累计受益人数
-     */
-    @Override
-    public Integer getTotalBeneficiaries() {
-        // 统计所有已批准的申请中的受益人总数
-        // 注意：如果数据库表中没有 beneficiaries 字段，这里暂时返回 0
-        // 需要在数据库中添加 beneficiaries 字段后才能正确统计
-        try {
-            LambdaQueryWrapper<Application> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(Application::getStatus, "approved");
-            List<Application> applications = list(wrapper);
-            
-            // 尝试从 remark 或其他字段提取受益人信息（临时方案）
-            // TODO: 需要在数据库中添加 beneficiaries 字段
-            return 0;
-        } catch (Exception e) {
-            log.error("获取受益人数失败", e);
-            return 0;
-        }
     }
 
     /**

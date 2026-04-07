@@ -1,6 +1,6 @@
 package com.epidemic.pandemic.producer;
 
-import com.epidemic.pandemic.config.RabbitMQConfig;
+import com.epidemic.common.mq.LogConstants;
 import com.epidemic.pandemic.entity.PushMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -28,8 +28,8 @@ public class PushMessageProducer {
                 pushMessage.getPushRecordId(), pushMessage.getTitle(), pushMessage.getTarget());
 
         rabbitTemplate.convertAndSend(
-                RabbitMQConfig.PUSH_EXCHANGE,
-                RabbitMQConfig.PUSH_ROUTING_KEY,
+                LogConstants.PUSH_EXCHANGE,
+                LogConstants.PUSH_ROUTING_KEY,
                 pushMessage
         );
 

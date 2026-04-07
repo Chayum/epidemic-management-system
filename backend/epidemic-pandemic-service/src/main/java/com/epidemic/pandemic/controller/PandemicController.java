@@ -3,6 +3,7 @@ package com.epidemic.pandemic.controller;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
 import com.epidemic.common.annotation.OperateLog;
+import com.epidemic.pandemic.dto.PushRecordQueryDTO;
 import com.epidemic.pandemic.entity.PandemicNews;
 import com.epidemic.pandemic.service.PandemicService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -78,8 +79,9 @@ public class PandemicController {
 
     @Operation(summary = "获取推送记录")
     @GetMapping("/push/list")
-    public Result<List<Map<String, Object>>> getPushList() {
-        return Result.success(pandemicService.getPushList());
+    public Result<PageResult<Map<String, Object>>> getPushList(
+            @ModelAttribute PushRecordQueryDTO queryDTO) {
+        return Result.success(pandemicService.getPushListByPage(queryDTO));
     }
 
     @Operation(summary = "发送推送")

@@ -2,6 +2,7 @@ package com.epidemic.pandemic.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.epidemic.common.result.PageResult;
+import com.epidemic.pandemic.dto.PushRecordQueryDTO;
 import com.epidemic.pandemic.entity.PandemicNews;
 
 import java.util.List;
@@ -48,10 +49,17 @@ public interface PandemicService extends IService<PandemicNews> {
     List<Map<String, Object>> getPushStats();
 
     /**
-     * 获取推送记录
+     * 获取推送记录（不分页）
      * @return 记录列表
      */
     List<Map<String, Object>> getPushList();
+
+    /**
+     * 获取推送记录（分页）
+     * @param queryDTO 查询参数
+     * @return 分页结果
+     */
+    PageResult<Map<String, Object>> getPushListByPage(PushRecordQueryDTO queryDTO);
 
     /**
      * 发送推送

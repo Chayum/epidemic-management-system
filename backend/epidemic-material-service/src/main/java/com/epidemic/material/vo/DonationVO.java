@@ -62,6 +62,15 @@ public class DonationVO implements Serializable {
     @Schema(description = "审核时间")
     private LocalDateTime approveTime;
 
+    @Schema(description = "审核人ID")
+    private Long approverId;
+
+    @Schema(description = "审核人姓名")
+    private String approverName;
+
+    @Schema(description = "审核备注")
+    private String approveRemark;
+
     @Schema(description = "备注")
     private String remark;
 }

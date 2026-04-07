@@ -49,7 +49,9 @@ public class ApplicationController {
     @Operation(summary = "获取申请详情")
     @GetMapping("/{id}")
     public Result<ApplicationVO> getById(@PathVariable String id) {
-        return Result.success(applicationService.getDetail(id));
+        // URL解码，防止+号被解析为空格（UUID中可能包含+字符）
+        String decodedId = java.net.URLDecoder.decode(id, java.nio.charset.StandardCharsets.UTF_8);
+        return Result.success(applicationService.getDetail(decodedId));
     }
 
     /**
@@ -96,8 +98,10 @@ public class ApplicationController {
     @PostMapping("/{id}/cancel")
     @OperateLog(module = "物资申请", operation = "取消申请")
     public Result<String> cancel(@PathVariable String id) {
+        // URL解码，防止+号被解析为空格（UUID中可能包含+字符）
+        String decodedId = java.net.URLDecoder.decode(id, java.nio.charset.StandardCharsets.UTF_8);
         Long userId = UserContext.getUserId();
-        applicationService.cancelApplication(id, userId);
+        applicationService.cancelApplication(decodedId, userId);
         return Result.success("取消成功");
     }
 
@@ -121,6 +125,8 @@ public class ApplicationController {
     @Operation(summary = "获取物流追踪信息")
     @GetMapping("/{id}/track")
     public Result<Map<String, Object>> track(@PathVariable String id) {
-        return Result.success(applicationService.getTrackInfo(id));
+        // URL解码，防止+号被解析为空格（UUID中可能包含+字符）
+        String decodedId = java.net.URLDecoder.decode(id, java.nio.charset.StandardCharsets.UTF_8);
+        return Result.success(applicationService.getTrackInfo(decodedId));
     }
 }

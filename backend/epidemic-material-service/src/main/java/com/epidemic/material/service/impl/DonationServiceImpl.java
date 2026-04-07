@@ -156,11 +156,10 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
                 itemDTO.setRemark(donation.getRemark());
                 
                 orderDTO.setItems(Collections.singletonList(itemDTO));
-                
-                String orderId = stockService.createOrder(orderDTO, userId, username);
-                // 自动审核入库单
-                stockService.auditOrder(orderId, userId, username, true, "自动审核捐赠入库");
-                
+
+                // 直接创建并自动审核入库单
+                String orderId = stockService.createOrder(orderDTO, userId, username, true);
+
                 log.info("捐赠[{}]审核通过，已生成入库单[{}]", donation.getId(), orderId);
             } else {
                 log.info("捐赠[{}]审核通过，但未指定入库物资，仅记录", donation.getId());
@@ -169,8 +168,10 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
         
         // 更新捐赠单状态
         donation.setStatus(approveDTO.getStatus());
-        donation.setRemark(approveDTO.getRemark());
+        donation.setApproveRemark(approveDTO.getRemark());
         donation.setApproveTime(LocalDateTime.now());
+        donation.setApproverId(userId);
+        donation.setApproverName(username);
         baseMapper.updateById(donation);
     }
 
@@ -227,16 +228,17 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
     
     /**
      * 获取累计捐赠总额
+     * 使用SQL聚合函数替代内存计算，避免大数据量时OOM
      */
     @Override
     public Double getTotalAmount() {
-        // TODO: 如果 Donation 实体类有 amount 字段，可以计算总金额
-        // 暂时返回 0 或者根据 quantity 估算
-        LambdaQueryWrapper<Donation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Donation::getStatus, "approved");
-        List<Donation> donations = list(wrapper);
-        
-        // 这里简单估算，实际应该有金额字段
-        return 0.0;
+        try {
+            // 直接调用Mapper的聚合函数，在数据库层完成求和
+            Integer total = baseMapper.sumApprovedQuantity();
+            return total != null ? total.doubleValue() : 0.0;
+        } catch (Exception e) {
+            log.error("获取捐赠总额失败", e);
+            return 0.0;
+        }
     }
 }

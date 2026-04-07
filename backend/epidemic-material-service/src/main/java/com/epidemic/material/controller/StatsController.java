@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -59,44 +60,44 @@ public class StatsController {
      */
     @Operation(summary = "获取仪表盘统计数据")
     @GetMapping("/dashboard")
-    public Result<Map<String, Object>> getDashboardStats() {
+    public Result<Map<String, Object>> getDashboardStats() throws Exception {
         Map<String, Object> data = new HashMap<>();
 
-        // 统计物资总数
-        data.put("totalMaterials", materialService.count());
+        // 使用并行查询优化性能
+        CompletableFuture<Long> totalMaterialsFuture = CompletableFuture.supplyAsync(() -> materialService.count());
+        CompletableFuture<Map<String, Object>> appStatsFuture = CompletableFuture.supplyAsync(() -> applicationService.getStats());
+        CompletableFuture<Map<String, Object>> donationStatsFuture = CompletableFuture.supplyAsync(() -> donationService.getStats());
+        CompletableFuture<List<Map<String, Object>>> warningListFuture = CompletableFuture.supplyAsync(() -> materialService.getWarningList());
+        CompletableFuture<Map<String, Integer>> logStatsFuture = CompletableFuture.supplyAsync(() -> inventoryLogService.getTodayStats());
+        CompletableFuture<Map<String, Object>> statsTrendFuture = CompletableFuture.supplyAsync(() -> inventoryLogService.getStatsTrend());
+        CompletableFuture<Long> totalStockFuture = CompletableFuture.supplyAsync(() -> materialService.getTotalStock());
 
-        // 统计待审核申请数
-        Map<String, Object> appStats = applicationService.getStats();
+        // 等待所有并行任务完成
+        CompletableFuture.allOf(totalMaterialsFuture, appStatsFuture, donationStatsFuture, warningListFuture, logStatsFuture, statsTrendFuture, totalStockFuture).join();
+
+        // 收集结果
+        data.put("totalMaterials", totalMaterialsFuture.get());
+        Map<String, Object> appStats = appStatsFuture.get();
         data.put("pendingApplications", appStats.get("pendingCount") != null ? appStats.get("pendingCount") : 0);
-
-        // 统计待审核捐赠数
-        Map<String, Object> donationStats = donationService.getStats();
+        Map<String, Object> donationStats = donationStatsFuture.get();
         data.put("pendingDonations", donationStats.get("pendingCount") != null ? donationStats.get("pendingCount") : 0);
+        List<Map<String, Object>> warningList = warningListFuture.get();
+        data.put("lowStockItems", warningList != null ? warningList.size() : 0);
 
-        // 统计库存预警物资数
-        int lowStockItems = materialService.getWarningList() != null ? materialService.getWarningList().size() : 0;
-        data.put("lowStockItems", lowStockItems);
-
-        // 统计今日出入库
-        Map<String, Integer> logStats = inventoryLogService.getTodayStats();
+        Map<String, Integer> logStats = logStatsFuture.get();
         int todayInbound = logStats.get("todayInbound") != null ? logStats.get("todayInbound") : 0;
         int todayOutbound = logStats.get("todayOutbound") != null ? logStats.get("todayOutbound") : 0;
         data.put("todayInbound", todayInbound);
         data.put("todayOutbound", todayOutbound);
 
-        // 计算出入库趋势（与昨日对比）
-        Map<String, Object> statsTrend = inventoryLogService.getStatsTrend();
+        Map<String, Object> statsTrend = statsTrendFuture.get();
         data.put("todayInboundTrend", statsTrend.get("inboundTrend"));
         data.put("todayInboundTrendType", statsTrend.get("inboundTrendType"));
         data.put("todayOutboundTrend", statsTrend.get("outboundTrend"));
         data.put("todayOutboundTrendType", statsTrend.get("outboundTrendType"));
 
-        // 物资总量趋势（暂用库存总量对比）
-        Long totalStock = materialService.getTotalStock();
         data.put("totalMaterialsTrend", 0);
         data.put("totalMaterialsTrendType", "up");
-
-        // 库存预警趋势（与昨日预警数量对比）
         data.put("lowStockItemsTrend", 0);
         data.put("lowStockItemsTrendType", "down");
 
@@ -112,43 +113,31 @@ public class StatsController {
      */
     @Operation(summary = "获取用户个人统计数据")
     @GetMapping("/user")
-    public Result<Map<String, Object>> getUserStats() {
+    public Result<Map<String, Object>> getUserStats() throws Exception {
         Long userId = UserContext.getUserId();
 
+        // 使用并行查询优化，5个统计查询同时执行
+        CompletableFuture<Long> myAppCountFuture = CompletableFuture.supplyAsync(() ->
+            applicationService.count(new LambdaQueryWrapper<Application>().eq(Application::getApplicantId, userId)));
+        CompletableFuture<Long> pendingAppCountFuture = CompletableFuture.supplyAsync(() ->
+            applicationService.count(new LambdaQueryWrapper<Application>().eq(Application::getApplicantId, userId).eq(Application::getStatus, "pending")));
+        CompletableFuture<Long> myDonationCountFuture = CompletableFuture.supplyAsync(() ->
+            donationService.count(new LambdaQueryWrapper<Donation>().eq(Donation::getDonorId, userId)));
+        CompletableFuture<Long> pendingDonationCountFuture = CompletableFuture.supplyAsync(() ->
+            donationService.count(new LambdaQueryWrapper<Donation>().eq(Donation::getDonorId, userId).eq(Donation::getStatus, "pending")));
+        CompletableFuture<Long> approvedDonationCountFuture = CompletableFuture.supplyAsync(() ->
+            donationService.count(new LambdaQueryWrapper<Donation>().eq(Donation::getDonorId, userId).eq(Donation::getStatus, "approved")));
+
+        // 等待所有并行任务完成
+        CompletableFuture.allOf(myAppCountFuture, pendingAppCountFuture, myDonationCountFuture,
+            pendingDonationCountFuture, approvedDonationCountFuture).join();
+
         Map<String, Object> data = new HashMap<>();
-        
-        // 统计我的申领总数
-        LambdaQueryWrapper<Application> appWrapper = new LambdaQueryWrapper<>();
-        appWrapper.eq(Application::getApplicantId, userId);
-        long myApplicationCount = applicationService.count(appWrapper);
-        data.put("myApplicationCount", myApplicationCount);
-        
-        // 统计我的待审核申领数
-        LambdaQueryWrapper<Application> pendingAppWrapper = new LambdaQueryWrapper<>();
-        pendingAppWrapper.eq(Application::getApplicantId, userId)
-                         .eq(Application::getStatus, "pending");
-        long pendingApplicationCount = applicationService.count(pendingAppWrapper);
-        data.put("pendingApplicationCount", pendingApplicationCount);
-        
-        // 统计我的捐赠总数
-        LambdaQueryWrapper<Donation> donationWrapper = new LambdaQueryWrapper<>();
-        donationWrapper.eq(Donation::getDonorId, userId);
-        long myDonationCount = donationService.count(donationWrapper);
-        data.put("myDonationCount", myDonationCount);
-
-        // 统计我的待审核捐赠数
-        LambdaQueryWrapper<Donation> pendingDonationWrapper = new LambdaQueryWrapper<>();
-        pendingDonationWrapper.eq(Donation::getDonorId, userId)
-                             .eq(Donation::getStatus, "pending");
-        long myPendingDonationCount = donationService.count(pendingDonationWrapper);
-        data.put("myPendingDonationCount", myPendingDonationCount);
-
-        // 统计我的已通过捐赠数
-        LambdaQueryWrapper<Donation> approvedDonationWrapper = new LambdaQueryWrapper<>();
-        approvedDonationWrapper.eq(Donation::getDonorId, userId)
-                              .eq(Donation::getStatus, "approved");
-        long myApprovedDonationCount = donationService.count(approvedDonationWrapper);
-        data.put("myApprovedDonationCount", myApprovedDonationCount);
+        data.put("myApplicationCount", myAppCountFuture.get());
+        data.put("pendingApplicationCount", pendingAppCountFuture.get());
+        data.put("myDonationCount", myDonationCountFuture.get());
+        data.put("myPendingDonationCount", pendingDonationCountFuture.get());
+        data.put("myApprovedDonationCount", approvedDonationCountFuture.get());
 
         return Result.success(data);
     }
@@ -307,10 +296,9 @@ public class StatsController {
         coreMetrics.setLowStockItemsTrend(0);
         coreMetrics.setLowStockItemsTrendType("down");
 
-        // 累计捐赠总额和受益人数（需要实现对应方法）
+        // 累计捐赠总额
         coreMetrics.setTotalDonationAmount(donationService.getTotalAmount());
-        coreMetrics.setTotalBeneficiaries(applicationService.getTotalBeneficiaries());
-        
+
         dashboard.setCoreMetrics(coreMetrics);
         
         // 2. 物资分类统计
@@ -340,9 +328,30 @@ public class StatsController {
     private List<DashboardVO.CategoryStats> buildMaterialCategoryStats() {
         Map<String, Object> stats = materialService.getStats();
         List<DashboardVO.CategoryStats> result = new ArrayList<>();
-        
-        // 从 stats 中提取分类数据（需要根据实际返回结构调整）
-        // 示例代码，实际需要根据 getStats() 的返回格式调整
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> typeStats = (List<Map<String, Object>>) stats.get("typeStats");
+        if (typeStats == null || typeStats.isEmpty()) {
+            return result;
+        }
+
+        // 计算总库存
+        int totalStock = typeStats.stream()
+                .mapToInt(m -> ((Number) m.get("stock")).intValue())
+                .sum();
+
+        for (Map<String, Object> item : typeStats) {
+            DashboardVO.CategoryStats categoryStats = new DashboardVO.CategoryStats();
+            categoryStats.setCategory((String) item.get("name"));
+            categoryStats.setCount(((Number) item.get("stock")).intValue());
+            if (totalStock > 0) {
+                categoryStats.setPercentage(((Number) item.get("stock")).doubleValue() / totalStock * 100);
+            } else {
+                categoryStats.setPercentage(0.0);
+            }
+            result.add(categoryStats);
+        }
+
         return result;
     }
     
@@ -351,24 +360,46 @@ public class StatsController {
      */
     private DashboardVO.TrendData buildTrendData(String period) {
         LocalDate end = LocalDate.now();
-        LocalDate start = end.minusWeeks(1);
-        
+        LocalDate start;
+        if ("month".equals(period)) {
+            start = end.minusMonths(1);
+        } else if ("year".equals(period)) {
+            start = end.minusYears(1);
+        } else {
+            start = end.minusWeeks(1);
+        }
+
+        String startDateStr = start.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String endDateStr = end.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        Map<String, List<Map<String, Object>>> trendDataMap = inventoryLogService.getTrendDataByDateRange(startDateStr, endDateStr);
+
         List<String> dates = new ArrayList<>();
         List<Integer> inbound = new ArrayList<>();
         List<Integer> outbound = new ArrayList<>();
-        
-        for (LocalDate date = start.plusDays(1); !date.isAfter(end); date = date.plusDays(1)) {
-            dates.add(date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-            // 这里需要调用实际的服务方法获取数据
-            inbound.add(0);
-            outbound.add(0);
+
+        List<Map<String, Object>> inboundList = trendDataMap.get("inbound");
+        List<Map<String, Object>> outboundList = trendDataMap.get("outbound");
+
+        Map<String, Integer> inboundMap = inboundList != null ? inboundList.stream()
+                .collect(Collectors.toMap(m -> (String) m.get("date"), m -> ((Number) m.get("count")).intValue()))
+                : new HashMap<>();
+        Map<String, Integer> outboundMap = outboundList != null ? outboundList.stream()
+                .collect(Collectors.toMap(m -> (String) m.get("date"), m -> ((Number) m.get("count")).intValue()))
+                : new HashMap<>();
+
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+            String dateStr = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            dates.add(dateStr);
+            inbound.add(inboundMap.getOrDefault(dateStr, 0));
+            outbound.add(outboundMap.getOrDefault(dateStr, 0));
         }
-        
+
         DashboardVO.TrendData trendData = new DashboardVO.TrendData();
         trendData.setDates(dates);
         trendData.setInbound(inbound);
         trendData.setOutbound(outbound);
-        
+
         return trendData;
     }
     

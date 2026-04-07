@@ -49,7 +49,9 @@ public class DonationController {
     @Operation(summary = "获取捐赠详情")
     @GetMapping("/{id}")
     public Result<DonationVO> getById(@PathVariable String id) {
-        DonationVO vo = donationService.getDetail(id);
+        // URL解码，防止+号被解析为空格（UUID中可能包含+字符）
+        String decodedId = java.net.URLDecoder.decode(id, java.nio.charset.StandardCharsets.UTF_8);
+        DonationVO vo = donationService.getDetail(decodedId);
         if (vo == null) {
             return Result.error(404, "捐赠记录不存在");
         }

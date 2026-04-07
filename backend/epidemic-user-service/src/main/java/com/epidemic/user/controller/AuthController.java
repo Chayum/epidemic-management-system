@@ -140,6 +140,7 @@ public class AuthController {
 
     /**
      * 增加登录失败次数
+     * 失败5次后锁定时间延长到30分钟
      * @param failKey Redis key
      */
     private void incrementLoginFailCount(String failKey) {
@@ -156,6 +157,10 @@ public class AuthController {
             // 第一次失败，设置 10 分钟过期
             redisTemplate.expire(failKey, 10, TimeUnit.MINUTES);
             log.info("用户登录失败，已记录失败次数：1");
+        } else if (count != null && count >= 5) {
+            // 失败5次后，锁定时间延长到30分钟
+            redisTemplate.expire(failKey, 30, TimeUnit.MINUTES);
+            log.warn("用户登录失败次数过多（{}次），已延长锁定时间至30分钟", count);
         } else if (count != null) {
             log.info("用户登录失败，累计失败次数：{}", count);
         }

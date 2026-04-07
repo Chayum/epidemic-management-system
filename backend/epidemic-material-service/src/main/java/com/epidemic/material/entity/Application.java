@@ -63,12 +63,6 @@ public class Application implements Serializable {
     private String approveRemark;
     
     /**
-     * 受益人数
-     */
-    @TableField(exist = false)
-    private Integer beneficiaries;
-    
-    /**
      * 申领原因
      */
     @TableField(exist = false)

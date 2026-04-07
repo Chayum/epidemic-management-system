@@ -566,3 +566,8 @@ INSERT INTO `donation` (`id`, `material_name`, `type`, `quantity`, `unit`, `dono
 -- 脚本执行完成
 -- ========================================
 SELECT 'epidemic_material 数据库初始化完成！包含35种物资、35条成本记录、15条订单、库存记录、申请单、捐赠单等' AS message;
+
+-- ========================================
+-- 数据库升级脚本（适用于已有数据库）
+-- ========================================
+-- 注意：donation 表的 approver_id, approver_name, approve_remark 字段已在建表时包含

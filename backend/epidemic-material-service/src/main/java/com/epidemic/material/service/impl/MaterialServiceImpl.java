@@ -12,6 +12,7 @@ import com.epidemic.material.mapper.MaterialMapper;
 import com.epidemic.material.service.CacheService;
 import com.epidemic.material.service.InventoryLogService;
 import com.epidemic.material.service.MaterialService;
+import com.epidemic.material.util.DistributedLockUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -39,6 +40,9 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
 
     @Autowired
     private InventoryLogService inventoryLogService;
+
+    @Autowired
+    private DistributedLockUtil distributedLockUtil;
 
     /**
      * 分页查询物资列表
@@ -269,39 +273,44 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
     public void checkInventory(String inventoryId, Integer actualStock, String remark) {
         // 解析物资 ID
         String materialId = inventoryId.replace("INV", "");
-        Material material = baseMapper.selectById(materialId);
-        if (material == null) {
-            throw new BusinessException("物资不存在");
-        }
-        
-        // 如果盘点数量与账面数量不一致，则生成盘点差异记录
-        if (!actualStock.equals(material.getStock())) {
-            Integer difference = actualStock - material.getStock();
+        // 使用分布式锁保证并发安全
+        String lockKey = "inventory:check:" + materialId;
 
-            // 更新库存
-            material.setStock(actualStock);
-            material.setUpdateTime(LocalDateTime.now());
-            material.setStatus(InventoryWarningUtil.calculateStatus(actualStock, material.getThreshold()));
-            baseMapper.updateById(material);
-            
-            // 清除缓存
-            cacheService.deleteMaterialStats();
-            cacheService.deleteWarningList();
-            
-            // 记录库存变动日志
-            inventoryLogService.log(
-                materialId,
-                material.getName(),
-                "adjust",
-                difference,
-                material.getStock() - difference,
-                actualStock,
-                null,
-                null,
-                "系统",
-                remark != null ? remark : "库存盘点"
-            );
-        }
+        distributedLockUtil.executeWithLock(lockKey, () -> {
+            Material material = baseMapper.selectById(materialId);
+            if (material == null) {
+                throw new BusinessException("物资不存在");
+            }
+
+            // 如果盘点数量与账面数量不一致，则生成盘点差异记录
+            if (!actualStock.equals(material.getStock())) {
+                Integer difference = actualStock - material.getStock();
+
+                // 更新库存
+                material.setStock(actualStock);
+                material.setUpdateTime(LocalDateTime.now());
+                material.setStatus(InventoryWarningUtil.calculateStatus(actualStock, material.getThreshold()));
+                baseMapper.updateById(material);
+
+                // 清除缓存
+                cacheService.deleteMaterialStats();
+                cacheService.deleteWarningList();
+
+                // 记录库存变动日志
+                inventoryLogService.log(
+                    materialId,
+                    material.getName(),
+                    "adjust",
+                    difference,
+                    material.getStock() - difference,
+                    actualStock,
+                    null,
+                    null,
+                    "系统",
+                    remark != null ? remark : "库存盘点"
+                );
+            }
+        });
     }
 
     /**

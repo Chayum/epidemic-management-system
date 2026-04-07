@@ -62,7 +62,7 @@ public class CacheServiceImpl implements CacheService {
     @Override
     public void setWarningList(Object warningList) {
         String key = "material:warning:list";
-        redisTemplate.opsForValue().set(key, warningList, 5, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(key, warningList, 1, TimeUnit.MINUTES);
         log.info("设置库存预警缓存：{}", key);
     }
 
@@ -89,7 +89,7 @@ public class CacheServiceImpl implements CacheService {
     @Override
     public void setTodayStats(Map<String, Integer> stats) {
         String key = "material:today:stats:" + java.time.LocalDate.now();
-        redisTemplate.opsForValue().set(key, stats, 24, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(key, stats, 1, TimeUnit.HOURS);
         log.info("设置今日出入库缓存：{}", key);
     }
 

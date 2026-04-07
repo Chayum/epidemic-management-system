@@ -32,6 +32,16 @@ public interface StockService extends IService<StockOrder> {
     String createOrder(StockOrderDTO dto, Long userId, String username);
 
     /**
+     * 创建库存单据（带自动审核）
+     * @param dto 单据信息
+     * @param userId 操作人ID
+     * @param username 操作人姓名
+     * @param autoApprove 是否自动审核通过
+     * @return 单据ID
+     */
+    String createOrder(StockOrderDTO dto, Long userId, String username, boolean autoApprove);
+
+    /**
      * 审核单据
      * @param orderId 单据ID
      * @param userId 审核人ID

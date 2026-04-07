@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.common.result.PageResult;
 import com.epidemic.common.result.Result;
+import com.epidemic.pandemic.dto.PushRecordQueryDTO;
 import com.epidemic.pandemic.entity.PandemicNews;
 import com.epidemic.pandemic.entity.PushMessage;
 import com.epidemic.pandemic.entity.PushRecord;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 疫情信息服务实现类
@@ -137,7 +139,7 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
         knowledge3.put("sortOrder", 3);
         list.add(knowledge3);
 
-        return PageResult.of(list, 10L, page, size);
+        return PageResult.of(list, (long) list.size(), page, size);
     }
 
     @Override
@@ -205,21 +207,32 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
 
     @Override
     public List<Map<String, Object>> getPushList() {
-        // 先尝试从缓存获取
-        List<Map<String, Object>> cachedList = cacheService.getPushListCache();
-        if (cachedList != null) {
-            log.debug("推送列表命中缓存");
-            return cachedList;
+        // 使用分页查询，默认查第一页20条，避免加载全量数据
+        PushRecordQueryDTO queryDTO = new PushRecordQueryDTO();
+        queryDTO.setPage(1);
+        queryDTO.setSize(20);
+        PageResult<Map<String, Object>> pageResult = getPushListByPage(queryDTO);
+        return pageResult.getList();
+    }
+
+    @Override
+    public PageResult<Map<String, Object>> getPushListByPage(PushRecordQueryDTO queryDTO) {
+        Page<PushRecord> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getSize());
+        LambdaQueryWrapper<PushRecord> wrapper = new LambdaQueryWrapper<>();
+
+        // 按状态筛选
+        if (StringUtils.hasText(queryDTO.getStatus())) {
+            wrapper.eq(PushRecord::getStatus, queryDTO.getStatus());
         }
 
-        List<PushRecord> records = pushRecordMapper.selectList(
-            new LambdaQueryWrapper<PushRecord>().orderByDesc(PushRecord::getPushTime)
-        );
+        // 按推送时间倒序
+        wrapper.orderByDesc(PushRecord::getPushTime);
 
-        List<Map<String, Object>> list = new ArrayList<>();
+        Page<PushRecord> result = pushRecordMapper.selectPage(pageParam, wrapper);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        for (PushRecord record : records) {
+        // 转换为Map列表
+        List<Map<String, Object>> records = result.getRecords().stream().map(record -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", record.getId());
             map.put("title", record.getTitle());
@@ -227,13 +240,10 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
             map.put("channelList", record.getChannels() != null ? record.getChannels().split(",") : new String[]{});
             map.put("time", record.getPushTime() != null ? record.getPushTime().format(formatter) : "");
             map.put("status", "success".equals(record.getStatus()) ? "成功" : "失败");
-            list.add(map);
-        }
+            return map;
+        }).collect(Collectors.toList());
 
-        // 缓存结果
-        cacheService.setPushListCache(list);
-
-        return list;
+        return PageResult.of(records, result.getTotal(), queryDTO.getPage(), queryDTO.getSize());
     }
 
     private String convertTargetName(String target) {

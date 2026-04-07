@@ -51,5 +51,11 @@ public class Donation implements Serializable {
 
     private LocalDateTime approveTime;
 
+    private Long approverId;
+
+    private String approverName;
+
+    private String approveRemark;
+
     private String remark;
 }

@@ -45,6 +45,18 @@
               </template>
             </el-table-column>
           </el-table>
+          <!-- 分页组件 -->
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="pagination.page"
+              v-model:page-size="pagination.size"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="pagination.total"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleSizeChange"
+              @current-change="handlePageChange"
+            />
+          </div>
         </div>
       </el-col>
       
@@ -117,6 +129,13 @@ const pushStats = ref([])
 
 const pushRecords = ref([])
 
+// 分页数据
+const pagination = reactive({
+  page: 1,
+  size: 10,
+  total: 0
+})
+
 const fetchStats = async () => {
   try {
     const res = await getPushStats()
@@ -139,13 +158,30 @@ const fetchStats = async () => {
 
 const fetchRecords = async () => {
   try {
-    const res = await getPushList()
+    const res = await getPushList({
+      page: pagination.page,
+      size: pagination.size
+    })
     if (res.code === 200) {
-      pushRecords.value = res.data
+      pushRecords.value = res.data.list || res.data.records
+      pagination.total = res.data.total
     }
   } catch (error) {
     console.error('获取推送记录失败', error)
   }
+}
+
+// 分页大小改变
+const handleSizeChange = (size) => {
+  pagination.size = size
+  pagination.page = 1
+  fetchRecords()
+}
+
+// 页码改变
+const handlePageChange = (page) => {
+  pagination.page = page
+  fetchRecords()
 }
 
 const roleChartData = ref([])
@@ -307,5 +343,11 @@ onMounted(() => {
 
 .chart-container {
   height: 320px;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
 }
 </style>

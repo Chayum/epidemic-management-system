@@ -24,6 +24,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -61,7 +62,15 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
         }
         Page<Material> result = materialService.page(materialPage, wrapper);
         
-        // 2. 组装台账信息
+        // 2. 批量查询成本信息（解决N+1查询问题）
+        List<String> materialIds = result.getRecords().stream()
+                .map(Material::getId)
+                .collect(Collectors.toList());
+        Map<String, MaterialCost> costMap = materialCostMapper.selectBatchIds(materialIds)
+                .stream()
+                .collect(Collectors.toMap(MaterialCost::getMaterialId, c -> c));
+
+        // 3. 组装台账信息
         List<InventoryLedgerVO> voList = new ArrayList<>();
         for (Material material : result.getRecords()) {
             InventoryLedgerVO vo = new InventoryLedgerVO();
@@ -73,9 +82,9 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
             vo.setThreshold(material.getThreshold());
             vo.setStatus(material.getStatus());
             vo.setWarehouse(material.getWarehouse());
-            
-            // 查询成本信息
-            MaterialCost cost = materialCostMapper.selectById(material.getId());
+
+            // 从批量查询的Map中获取成本信息
+            MaterialCost cost = costMap.get(material.getId());
             if (cost != null) {
                 vo.setAvgPrice(cost.getAvgPrice());
                 vo.setTotalValue(cost.getTotalValue());
@@ -152,6 +161,27 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
         }
 
         return order.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String createOrder(StockOrderDTO dto, Long userId, String username, boolean autoApprove) {
+        // 先创建单据
+        String orderId = createOrder(dto, userId, username);
+
+        // 如果需要自动审核
+        if (autoApprove) {
+            StockOrder order = getById(orderId);
+            order.setStatus("approved");
+            order.setAuditorId(userId);
+            order.setAuditorName(username);
+            order.setAuditTime(LocalDateTime.now());
+            updateById(order);
+            // 执行库存变动
+            executeStockChange(order, userId, username);
+        }
+
+        return orderId;
     }
 
     @Override

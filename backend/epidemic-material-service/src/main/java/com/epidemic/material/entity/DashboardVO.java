@@ -133,11 +133,6 @@ public class DashboardVO implements Serializable {
          * 累计捐赠总额
          */
         private Double totalDonationAmount;
-
-        /**
-         * 累计受益人数
-         */
-        private Integer totalBeneficiaries;
     }
     
     /**

@@ -122,12 +122,17 @@ export const getPushStats = () => {
 
 /**
  * 获取推送记录
+ * @param {Object} params - 查询参数
+ * @param {number} params.page - 页码
+ * @param {number} params.size - 每页大小
+ * @param {string} params.status - 推送状态（可选）
  * @returns {Promise} Axios Promise对象
  */
-export const getPushList = () => {
+export const getPushList = (params) => {
   return request({
     url: '/pandemic/push/list',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 

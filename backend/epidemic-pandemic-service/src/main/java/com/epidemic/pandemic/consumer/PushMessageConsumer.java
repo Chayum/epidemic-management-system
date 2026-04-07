@@ -1,7 +1,7 @@
 package com.epidemic.pandemic.consumer;
 
+import com.epidemic.common.mq.LogConstants;
 import com.epidemic.common.result.Result;
-import com.epidemic.pandemic.config.RabbitMQConfig;
 import com.epidemic.pandemic.entity.PushMessage;
 import com.epidemic.pandemic.feign.UserFeignClient;
 import com.epidemic.pandemic.service.UserNotificationService;
@@ -30,7 +30,7 @@ public class PushMessageConsumer {
     /**
      * 监听推送队列，处理推送消息
      */
-    @RabbitListener(queues = RabbitMQConfig.PUSH_QUEUE)
+    @RabbitListener(queues = LogConstants.PUSH_QUEUE)
     public void handlePushMessage(PushMessage pushMessage) {
         log.info("消费推送消息: pushRecordId={}, title={}, target={}",
                 pushMessage.getPushRecordId(), pushMessage.getTitle(), pushMessage.getTarget());

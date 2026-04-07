@@ -38,7 +38,45 @@
             />
           </div>
         </el-tab-pane>
-        
+
+        <el-tab-pane label="申领审核记录" name="applicationRecord">
+          <el-table :data="applicationRecordList" v-loading="recordLoading" style="width: 100%">
+            <el-table-column prop="id" label="申请单号" width="180" />
+            <el-table-column prop="materialName" label="物资名称" width="150" />
+            <el-table-column prop="quantity" label="申请数量" width="100" />
+            <el-table-column prop="urgency" label="紧急程度" width="100">
+              <template #default="scope">
+                <el-tag :type="getUrgencyType(scope.row.urgency)">{{ getUrgencyText(scope.row.urgency) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="applicantName" label="申请人" width="100" />
+            <el-table-column prop="applicantUnit" label="申请单位" width="150" />
+            <el-table-column prop="receiver" label="收货人" width="100" />
+            <el-table-column prop="receiverPhone" label="收货电话" width="130" />
+            <el-table-column prop="status" label="审核状态" width="100">
+              <template #default="scope">
+                <el-tag :type="scope.row.status === 'approved' ? 'success' : 'danger'">
+                  {{ scope.row.status === 'approved' ? '已通过' : '已驳回' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="approveTime" label="审核时间" width="160">
+              <template #default="scope">{{ formatDate(scope.row.approveTime) }}</template>
+            </el-table-column>
+            <el-table-column prop="approverName" label="审核人" width="100" />
+            <el-table-column prop="approveRemark" label="审核备注" />
+          </el-table>
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="appRecordPage.page"
+              v-model:page-size="appRecordPage.size"
+              :total="appRecordPage.total"
+              layout="total, prev, pager, next"
+              @current-change="fetchApplicationRecords"
+            />
+          </div>
+        </el-tab-pane>
+
         <el-tab-pane label="物资捐赠审核" name="donation">
           <el-table :data="donationList" v-loading="loading" style="width: 100%">
             <el-table-column prop="id" label="捐赠单号" width="180" />
@@ -65,6 +103,40 @@
               :total="donationPage.total"
               layout="total, prev, pager, next"
               @current-change="fetchDonations"
+            />
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="捐赠审核记录" name="donationRecord">
+          <el-table :data="donationRecordList" v-loading="recordLoading" style="width: 100%">
+            <el-table-column prop="id" label="捐赠单号" width="180" />
+            <el-table-column prop="donorUnit" label="捐赠方" width="180" />
+            <el-table-column prop="materialName" label="物资名称" width="150" />
+            <el-table-column prop="quantity" label="数量" width="100" />
+            <el-table-column prop="unit" label="单位" width="80" />
+            <el-table-column prop="contactPerson" label="联系人" width="120" />
+            <el-table-column prop="contactPhone" label="电话" width="150" />
+            <el-table-column prop="source" label="来源" width="120" />
+            <el-table-column prop="status" label="审核状态" width="100">
+              <template #default="scope">
+                <el-tag :type="scope.row.status === 'approved' ? 'success' : 'danger'">
+                  {{ scope.row.status === 'approved' ? '已通过' : '已驳回' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="approveTime" label="审核时间" width="160">
+              <template #default="scope">{{ formatDate(scope.row.approveTime) }}</template>
+            </el-table-column>
+            <el-table-column prop="approverName" label="审核人" width="100" />
+            <el-table-column prop="approveRemark" label="审核备注" />
+          </el-table>
+          <div class="pagination-container">
+            <el-pagination
+              v-model:current-page="donRecordPage.page"
+              v-model:page-size="donRecordPage.size"
+              :total="donRecordPage.total"
+              layout="total, prev, pager, next"
+              @current-change="fetchDonationRecords"
             />
           </div>
         </el-tab-pane>
@@ -108,8 +180,18 @@ const submitting = ref(false)
 const applicationList = ref([])
 const appPage = reactive({ page: 1, size: 10, total: 0 })
 
+// 已审核的申请记录
+const applicationRecordList = ref([])
+const appRecordPage = reactive({ page: 1, size: 10, total: 0 })
+
 const donationList = ref([])
 const donationPage = reactive({ page: 1, size: 10, total: 0 })
+
+// 已审核的捐赠记录
+const donationRecordList = ref([])
+const donRecordPage = reactive({ page: 1, size: 10, total: 0 })
+
+const recordLoading = ref(false)
 
 const approveForm = reactive({
   id: '',
@@ -140,10 +222,10 @@ const fetchApplications = async () => {
 const fetchDonations = async () => {
   loading.value = true
   try {
-    const res = await getDonationList({ 
-      page: donationPage.page, 
-      size: donationPage.size, 
-      status: 'pending' 
+    const res = await getDonationList({
+      page: donationPage.page,
+      size: donationPage.size,
+      status: 'pending'
     })
     if (res.code === 200) {
       donationList.value = res.data.list || []
@@ -156,11 +238,79 @@ const fetchDonations = async () => {
   }
 }
 
+// 获取已审核的申请记录
+const fetchApplicationRecords = async () => {
+  recordLoading.value = true
+  try {
+    // 获取已通过的申请
+    const approvedRes = await getApplicationList({
+      page: appRecordPage.page,
+      size: appRecordPage.size,
+      status: 'approved'
+    })
+    // 获取已驳回的申请
+    const rejectedRes = await getApplicationList({
+      page: appRecordPage.page,
+      size: appRecordPage.size,
+      status: 'rejected'
+    })
+
+    let approvedList = approvedRes.data?.list || []
+    let rejectedList = rejectedRes.data?.list || []
+
+    // 合并列表
+    applicationRecordList.value = [...approvedList, ...rejectedList]
+    const totalApproved = approvedRes.data?.total || 0
+    const totalRejected = rejectedRes.data?.total || 0
+    appRecordPage.total = totalApproved + totalRejected
+  } catch (error) {
+    console.error('获取申请审核记录失败', error)
+  } finally {
+    recordLoading.value = false
+  }
+}
+
+// 获取已审核的捐赠记录
+const fetchDonationRecords = async () => {
+  recordLoading.value = true
+  try {
+    // 获取已通过的捐赠
+    const approvedRes = await getDonationList({
+      page: donRecordPage.page,
+      size: donRecordPage.size,
+      status: 'approved'
+    })
+    // 获取已拒绝的捐赠
+    const rejectedRes = await getDonationList({
+      page: donRecordPage.page,
+      size: donRecordPage.size,
+      status: 'rejected'
+    })
+
+    let approvedList = approvedRes.data?.list || []
+    let rejectedList = rejectedRes.data?.list || []
+
+    // 合并列表
+    donationRecordList.value = [...approvedList, ...rejectedList]
+    const totalApproved = approvedRes.data?.total || 0
+    const totalRejected = rejectedRes.data?.total || 0
+    donRecordPage.total = totalApproved + totalRejected
+  } catch (error) {
+    console.error('获取捐赠审核记录失败', error)
+  } finally {
+    recordLoading.value = false
+  }
+}
+
 const handleTabChange = (tab) => {
   if (tab === 'application') {
     fetchApplications()
-  } else {
+  } else if (tab === 'applicationRecord') {
+    fetchApplicationRecords()
+  } else if (tab === 'donation') {
     fetchDonations()
+  } else if (tab === 'donationRecord') {
+    fetchDonationRecords()
   }
 }
 

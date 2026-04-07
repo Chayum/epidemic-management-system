@@ -13,6 +13,9 @@ public class PageResult<T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * 分页数据列表（兼容前端 list 字段）
+     */
     private List<T> list;
     private Long total;
     private Integer page;

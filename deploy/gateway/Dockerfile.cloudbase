@@ -1,0 +1,14 @@
+# 微信云托管 - Gateway 服务
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /app
+COPY pom.xml .
+COPY epidemic-common/pom.xml epidemic-common/
+COPY epidemic-gateway/pom.xml epidemic-gateway/
+RUN mvn dependency:go-offline -B
+COPY epidemic-gateway/src epidemic-gateway/src
+RUN mvn package -DskipTests -B
+
+FROM eclipse-temurin:17-jre-alpine
+COPY --from=builder /app/epidemic-gateway/target/*.jar /app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app.jar"]

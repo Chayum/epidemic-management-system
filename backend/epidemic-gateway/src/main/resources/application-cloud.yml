@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: epidemic-gateway
+  config:
+    import: optional:classpath:common-config.yml
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: auth-login
+          uri: lb://epidemic-user-service
+          predicates:
+            - Path=/api/auth/login
+          filters:
+            - StripPrefix=1
+            - LoginToken
+        - id: auth-logout
+          uri: lb://epidemic-user-service
+          predicates:
+            - Path=/api/auth/logout
+          filters:
+            - StripPrefix=1
+            - LogoutToken
+        - id: user-service
+          uri: lb://epidemic-user-service
+          predicates:
+            - Path=/api/user/**, /api/auth/**
+          filters:
+            - StripPrefix=1
+        - id: material-service
+          uri: lb://epidemic-material-service
+          predicates:
+            - Path=/api/material/**, /api/inventory/**, /api/donation/**, /api/application/**, /api/stats/**, /api/stock/**
+          filters:
+            - StripPrefix=1
+        - id: pandemic-service
+          uri: lb://epidemic-pandemic-service
+          predicates:
+            - Path=/api/pandemic/**, /api/notification/**
+          filters:
+            - StripPrefix=1
+        - id: log-service
+          uri: lb://epidemic-user-service
+          predicates:
+            - Path=/api/log/**
+          filters:
+            - StripPrefix=1
+
+server:
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET:epidemic-material-management-secret-key-2024-super-secret}
+  expiration: 7200000
+
+auth:
+  whitelist:
+    - /api/auth/login
+    - /api/auth/register
+    - /doc.html
+    - /swagger-ui.html
+    - /webjars/**
+    - /v3/api-docs/**
