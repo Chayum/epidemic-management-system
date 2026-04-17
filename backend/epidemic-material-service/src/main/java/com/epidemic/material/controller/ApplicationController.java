@@ -129,4 +129,20 @@ public class ApplicationController {
         String decodedId = java.net.URLDecoder.decode(id, java.nio.charset.StandardCharsets.UTF_8);
         return Result.success(applicationService.getTrackInfo(decodedId));
     }
+
+    /**
+     * 确认收货
+     * @param id 申请ID
+     * @return 确认结果消息
+     */
+    @Operation(summary = "确认收货")
+    @PostMapping("/{id}/confirm")
+    @OperateLog(module = "物资申请", operation = "确认收货")
+    public Result<String> confirmReceive(@PathVariable String id) {
+        // URL解码，防止+号被解析为空格（UUID中可能包含+字符）
+        String decodedId = java.net.URLDecoder.decode(id, java.nio.charset.StandardCharsets.UTF_8);
+        Long userId = UserContext.getUserId();
+        applicationService.confirmReceive(decodedId, userId);
+        return Result.success("确认收货成功");
+    }
 }

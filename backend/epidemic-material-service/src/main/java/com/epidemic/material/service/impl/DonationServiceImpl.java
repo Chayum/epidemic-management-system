@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.UUID;
 import com.epidemic.material.dto.StockOrderDTO;
 import com.epidemic.material.service.StockService;
+import com.epidemic.material.service.DonationCertificateService;
+import com.epidemic.material.entity.DonationCertificate;
 import java.math.BigDecimal;
 import java.util.Collections;
 
@@ -47,6 +49,9 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
 
     @Autowired
     private StockService stockService;
+
+    @Autowired
+    private DonationCertificateService donationCertificateService;
 
     /**
      * 分页查询捐赠列表
@@ -140,7 +145,7 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
                 if (material == null) {
                     throw new BusinessException("目标物资不存在，无法入库");
                 }
-                
+
                 // 创建入库单
                 StockOrderDTO orderDTO = new StockOrderDTO();
                 orderDTO.setType("inbound");
@@ -148,13 +153,13 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
                 orderDTO.setSourceId(donation.getId());
                 orderDTO.setSupplier(donation.getDonorUnit());
                 orderDTO.setRemark("捐赠入库: " + donation.getRemark());
-                
+
                 StockOrderDTO.StockOrderItemDTO itemDTO = new StockOrderDTO.StockOrderItemDTO();
                 itemDTO.setMaterialId(material.getId());
                 itemDTO.setQuantity(donation.getQuantity());
                 itemDTO.setPrice(BigDecimal.ZERO); // 捐赠通常无价格，或者设为0
                 itemDTO.setRemark(donation.getRemark());
-                
+
                 orderDTO.setItems(Collections.singletonList(itemDTO));
 
                 // 直接创建并自动审核入库单
@@ -164,6 +169,17 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
             } else {
                 log.info("捐赠[{}]审核通过，但未指定入库物资，仅记录", donation.getId());
             }
+
+            // 生成捐赠证书
+            String donorName = StringUtils.hasText(donation.getContactPerson()) ? donation.getContactPerson() : "匿名捐赠者";
+            donationCertificateService.generateCertificate(
+                    donation.getId(),
+                    donation.getDonorId(),
+                    donorName,
+                    donation.getMaterialName(),
+                    donation.getQuantity(),
+                    donation.getUnit()
+            );
         }
         
         // 更新捐赠单状态

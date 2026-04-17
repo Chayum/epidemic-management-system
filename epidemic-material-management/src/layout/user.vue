@@ -77,8 +77,10 @@ const userStore = useUserStore()
 
 const userInfo = computed(() => userStore.userInfo || {})
 const userRole = computed(() => userStore.userRole)
-const canDonate = computed(() => ['donor', 'community_staff', 'hospital_user'].includes(userRole.value))
-const canApply = computed(() => ['hospital_user', 'community_staff'].includes(userRole.value))
+// 只有捐赠方可以捐赠物资
+const canDonate = computed(() => ['donor'].includes(userRole.value))
+// 只有申请方可以申领物资
+const canApply = computed(() => ['applicant'].includes(userRole.value))
 
 const activeMenu = computed(() => route.path)
 

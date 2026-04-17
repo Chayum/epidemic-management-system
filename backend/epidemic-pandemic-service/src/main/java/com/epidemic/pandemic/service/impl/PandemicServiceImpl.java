@@ -250,9 +250,8 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
         if (target == null) return "未知";
         return switch (target) {
             case "all" -> "全部用户";
-            case "hospital_user" -> "医院用户";
-            case "community_staff" -> "社区人员";
-            case "material_approver" -> "物资审核员";
+            case "applicant" -> "申请方";
+            case "donor" -> "捐赠方";
             default -> target;
         };
     }
@@ -311,16 +310,16 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
             : new ArrayList<>();
 
         List<Map<String, Object>> list = new ArrayList<>();
+        // 角色名称映射
         Map<String, String> roleNameMap = new HashMap<>();
         roleNameMap.put("admin", "管理员");
-        roleNameMap.put("hospital_user", "医院用户");
-        roleNameMap.put("community_staff", "社区人员");
+        roleNameMap.put("applicant", "申请方");
         roleNameMap.put("donor", "捐赠方");
 
+        // 角色颜色映射（用于图表展示）
         Map<String, String> colorMap = new HashMap<>();
         colorMap.put("admin", "#722ed1");
-        colorMap.put("hospital_user", "#1890ff");
-        colorMap.put("community_staff", "#52c41a");
+        colorMap.put("applicant", "#1890ff");
         colorMap.put("donor", "#faad14");
 
         for (Map<String, Object> row : results) {

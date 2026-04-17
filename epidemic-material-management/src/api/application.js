@@ -100,3 +100,15 @@ export const getTrackInfo = (id) => {
     method: 'get'
   })
 }
+
+/**
+ * 确认收货
+ * @param {string} id - 申请ID
+ * @returns {Promise} Axios Promise对象
+ */
+export const confirmReceive = (id) => {
+  return request({
+    url: `/application/${id}/confirm`,
+    method: 'post'
+  })
+}

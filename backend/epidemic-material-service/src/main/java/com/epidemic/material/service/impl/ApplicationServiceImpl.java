@@ -330,6 +330,39 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
     }
 
     /**
+     * 确认收货
+     * 申请人确认已收到物资，将状态从 delivered 更新为 received
+     *
+     * @param applicationId 申请单ID
+     * @param userId 操作用户ID
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void confirmReceive(String applicationId, Long userId) {
+        Application application = baseMapper.selectById(applicationId);
+        if (application == null) {
+            throw new BusinessException("申请单不存在");
+        }
+        // 验证操作权限：只有申请人可以确认收货
+        if (!application.getApplicantId().equals(userId)) {
+            throw new BusinessException("只有申请人可以确认收货");
+        }
+        // 验证当前状态：只有已配送的申请可以确认收货
+        if (!"delivered".equals(application.getStatus())) {
+            throw new BusinessException("只有已配送的申请可以确认收货");
+        }
+
+        // 更新状态为已收货
+        application.setStatus("received");
+        baseMapper.updateById(application);
+
+        // 添加追踪记录
+        addTrackRecord(applicationId, "received", "申请人确认收货", userId, application.getApplicantName());
+
+        log.info("用户[{}]确认收货，申请单: {}", userId, applicationId);
+    }
+
+    /**
      * 添加追踪记录
      *
      * @param applicationId 申请单号

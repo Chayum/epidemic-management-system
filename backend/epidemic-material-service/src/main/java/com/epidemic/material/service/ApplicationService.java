@@ -79,4 +79,11 @@ public interface ApplicationService extends IService<Application> {
      * @return 趋势数据列表
      */
     List<Map<String, Object>> getTrendData(String startDate);
+
+    /**
+     * 确认收货
+     * @param applicationId 申请单ID
+     * @param userId 操作用户ID
+     */
+    void confirmReceive(String applicationId, Long userId);
 }

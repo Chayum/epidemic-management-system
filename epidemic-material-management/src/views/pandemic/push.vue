@@ -79,9 +79,8 @@
         <el-form-item label="推送对象" prop="target">
           <el-select v-model="form.target" placeholder="请选择推送对象" style="width: 100%">
             <el-option label="全部用户" value="all" />
-            <el-option label="医院用户" value="hospital_user" />
-            <el-option label="社区人员" value="community_staff" />
-            <el-option label="物资审核员" value="material_approver" />
+            <el-option label="申请方" value="applicant" />
+            <el-option label="捐赠方" value="donor" />
           </el-select>
         </el-form-item>
         <el-form-item label="推送渠道" prop="channel">

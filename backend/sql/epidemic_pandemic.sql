@@ -82,7 +82,7 @@ CREATE TABLE `push_record` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `title` VARCHAR(200) NOT NULL COMMENT '推送标题',
     `content` TEXT COMMENT '推送内容',
-    `target` VARCHAR(50) NOT NULL COMMENT '推送对象(all/hospital_user/community_staff/material_approver)',
+    `target` VARCHAR(50) NOT NULL COMMENT '推送对象(all/applicant/donor)',
     `channels` VARCHAR(100) DEFAULT NULL COMMENT '推送渠道(APP,SMS,WEB)',
     `status` VARCHAR(20) DEFAULT 'success' COMMENT '状态(success/failed)',
     `push_time` DATETIME DEFAULT NULL COMMENT '推送时间',
@@ -631,25 +631,24 @@ INSERT INTO `pandemic_data` (`region`, `confirmed`, `cured`, `dead`, `suspected`
 -- 初始化推送记录数据
 -- ========================================
 INSERT INTO `push_record` (`title`, `content`, `target`, `channels`, `status`, `push_time`) VALUES
-('物资紧缺提醒', '口罩、防护服等物资库存告急，请各部门及时补充。', 'hospital_user', 'APP,SMS', 'success', '2026-03-19 10:30:00'),
+('物资紧缺提醒', '口罩、防护服等物资库存告急，请各部门及时补充。', 'applicant', 'APP,SMS', 'success', '2026-03-19 10:30:00'),
 ('新政策发布', '关于进一步加强疫情防控工作的通知已发布，请查阅。', 'all', 'APP,WEB', 'success', '2026-03-19 09:00:00'),
-('消毒物资到位', '新到一批消毒物资，已分配至各社区，请及时领取。', 'community_staff', 'APP', 'success', '2026-03-18 15:30:00'),
+('消毒物资到位', '新到一批消毒物资，已分配至各社区，请及时领取。', 'applicant', 'APP', 'success', '2026-03-18 15:30:00'),
 ('核酸检测安排', '本周核酸检测安排已更新，请查看具体时间地点。', 'all', 'APP,SMS,WEB', 'success', '2026-03-18 08:00:00'),
 ('防疫知识科普', '如何正确佩戴口罩？疾控中心给出最新指南。', 'all', 'APP', 'success', '2026-03-17 14:00:00'),
-('社区排查通知', '请各社区加强重点人群排查，发现异常及时上报。', 'community_staff', 'APP,SMS', 'success', '2026-03-17 10:00:00'),
-('医院物资申请', '有新物资申请待审核，请相关人员及时处理。', 'material_approver', 'APP', 'success', '2026-03-16 16:00:00'),
+('社区排查通知', '请各社区加强重点人群排查，发现异常及时上报。', 'applicant', 'APP,SMS', 'success', '2026-03-17 10:00:00'),
 ('爱心企业捐赠', '华润医药集团捐赠防护物资，已入库。', 'all', 'APP,WEB', 'success', '2026-03-15 16:30:00'),
 ('疫情数据通报', '全市新增确诊病例3例，请做好防护。', 'all', 'APP,SMS,WEB', 'success', '2026-03-14 09:00:00'),
-('防护服穿脱指南', '最新防护服穿脱流程，请医护人员参考。', 'hospital_user', 'APP', 'success', '2026-03-13 11:00:00'),
-('社区物资配送', '新一批社区防疫物资已配送，请注意查收。', 'community_staff', 'APP', 'success', '2026-03-12 14:30:00'),
-('消杀工作提醒', '请各社区定时开展公共场所消杀工作。', 'community_staff', 'APP,SMS', 'success', '2026-03-11 08:00:00'),
+('防护服穿脱指南', '最新防护服穿脱流程，请医护人员参考。', 'applicant', 'APP', 'success', '2026-03-13 11:00:00'),
+('社区物资配送', '新一批社区防疫物资已配送，请注意查收。', 'applicant', 'APP', 'success', '2026-03-12 14:30:00'),
+('消杀工作提醒', '请各社区定时开展公共场所消杀工作。', 'applicant', 'APP,SMS', 'success', '2026-03-11 08:00:00'),
 ('发热就诊指引', '如出现发热症状，请就近到发热门诊就诊。', 'all', 'APP,WEB', 'success', '2026-03-10 12:00:00'),
 ('疫苗接种通知', '第二针疫苗接种工作即将开始，请做好准备。', 'all', 'APP,SMS,WEB', 'success', '2026-03-09 09:30:00'),
 ('心理健康关怀', '疫情期间，请注意心理健康，如有需要可拨打心理援助热线。', 'all', 'APP', 'success', '2026-03-08 10:00:00'),
-('医院院感检查', '下周将开展医疗机构院感防控检查，请做好准备。', 'hospital_user', 'APP', 'success', '2026-03-07 15:00:00'),
+('医院院感检查', '下周将开展医疗机构院感防控检查，请做好准备。', 'applicant', 'APP', 'success', '2026-03-07 15:00:00'),
 ('捐赠物资公示', '社会捐赠物资使用情况公示，请查阅监督。', 'all', 'APP,WEB', 'success', '2026-03-06 16:00:00'),
-('学校防控督查', '近期将开展学校疫情防控工作督查。', 'material_approver', 'APP,SMS', 'success', '2026-03-05 14:00:00'),
-('重点人群管理', '请加强入境人员和中高风险地区返市人员管理。', 'community_staff', 'APP,SMS', 'success', '2026-03-04 08:30:00'),
+('捐赠感谢通知', '感谢捐赠方的爱心捐赠，物资已发放到位。', 'donor', 'APP,SMS', 'success', '2026-03-05 14:00:00'),
+('重点人群管理', '请加强入境人员和中高风险地区返市人员管理。', 'applicant', 'APP,SMS', 'success', '2026-03-04 08:30:00'),
 ('交通枢纽防控', '火车站、汽车站、机场等交通枢纽防控措施升级。', 'all', 'APP,WEB', 'success', '2026-03-03 10:00:00');
 
 -- ========================================

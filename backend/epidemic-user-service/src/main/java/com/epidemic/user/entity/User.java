@@ -37,7 +37,7 @@ public class User implements Serializable {
     private String name;
 
     /**
-     * 角色：admin-管理员，hospital_user-医院用户，community_staff-社区人员，donor-捐赠方
+     * 角色：admin-管理员，applicant-申请方(医院/社区)，donor-捐赠方
      */
     private String role;
 

@@ -113,15 +113,24 @@ public class AuthController {
         }
 
         // 校验登录角色权限
+        // 确保用户只能以自己拥有的角色身份登录
         String requestRole = loginRequest.getRole();
         if (StringUtils.hasText(requestRole)) {
+            // 管理员角色：只有 admin 用户可以登录
             if ("admin".equals(requestRole)) {
                 if (!"admin".equals(user.getRole())) {
                     incrementLoginFailCount(failKey);
                     return Result.error("账户或密码错误");
                 }
-            } else {
-                if ("admin".equals(user.getRole())) {
+            // 申请方角色：只有 applicant 用户可以登录
+            } else if ("applicant".equals(requestRole)) {
+                if (!"applicant".equals(user.getRole())) {
+                    incrementLoginFailCount(failKey);
+                    return Result.error("账户或密码错误");
+                }
+            // 捐赠方角色：只有 donor 用户可以登录
+            } else if ("donor".equals(requestRole)) {
+                if (!"donor".equals(user.getRole())) {
                     incrementLoginFailCount(failKey);
                     return Result.error("账户或密码错误");
                 }

@@ -25,55 +25,55 @@ const routes = [
         path: 'home',
         name: 'UserHome',
         component: () => import('@/views/user/home.vue'),
-        meta: { title: '首页', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user'] }
+        meta: { title: '首页', requiresAuth: true, roles: ['applicant', 'donor'] }
       },
       {
         path: 'donation',
         name: 'UserDonation',
         component: () => import('@/views/user/donation.vue'),
-        meta: { title: '我要捐赠', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user'] }
+        meta: { title: '我要捐赠', requiresAuth: true, roles: ['donor'] }
       },
       {
         path: 'apply',
         name: 'UserApply',
         component: () => import('@/views/user/apply.vue'),
-        meta: { title: '物资申领', requiresAuth: true, roles: ['hospital_user', 'community_staff'] }
+        meta: { title: '物资申领', requiresAuth: true, roles: ['applicant'] }
       },
       {
         path: 'my-application',
         name: 'UserMyApplication',
         component: () => import('@/views/user/my-application.vue'),
-        meta: { title: '我的申请', requiresAuth: true, roles: ['hospital_user', 'community_staff'] }
+        meta: { title: '我的申请', requiresAuth: true, roles: ['applicant'] }
       },
       {
         path: 'my-donation',
         name: 'UserMyDonation',
         component: () => import('@/views/user/my-donation.vue'),
-        meta: { title: '我的捐赠', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user'] }
+        meta: { title: '我的捐赠', requiresAuth: true, roles: ['donor'] }
       },
       {
         path: 'notification',
         name: 'UserNotification',
         component: () => import('@/views/user/notification.vue'),
-        meta: { title: '消息通知', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user', 'admin'] }
+        meta: { title: '消息通知', requiresAuth: true, roles: ['applicant', 'donor', 'admin'] }
       },
       {
         path: 'pandemic-news',
         name: 'UserPandemicNews',
         component: () => import('@/views/user/pandemic-news.vue'),
-        meta: { title: '疫情动态', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user', 'admin'] }
+        meta: { title: '疫情动态', requiresAuth: true, roles: ['applicant', 'donor', 'admin'] }
       },
       {
         path: 'profile',
         name: 'UserProfile',
         component: () => import('@/views/user/profile.vue'),
-        meta: { title: '个人中心', requiresAuth: true, roles: ['donor', 'community_staff', 'hospital_user'] }
+        meta: { title: '个人中心', requiresAuth: true, roles: ['applicant', 'donor'] }
       },
       {
         path: 'track',
         name: 'UserTrack',
         component: () => import('@/views/material/track.vue'),
-        meta: { title: '物流追踪', requiresAuth: true, roles: ['hospital_user', 'community_staff'] }
+        meta: { title: '物流追踪', requiresAuth: true, roles: ['applicant'] }
       }
     ]
   },
@@ -171,7 +171,7 @@ const routes = [
             path: 'news',
             name: 'PandemicNews',
             component: () => import('@/views/pandemic/news.vue'),
-            meta: { title: '疫情动态', requiresAuth: true, roles: ['admin', 'donor', 'community_staff', 'hospital_user'] }
+            meta: { title: '疫情动态', requiresAuth: true, roles: ['admin', 'applicant', 'donor'] }
           },
           {
             path: 'push',
@@ -183,7 +183,7 @@ const routes = [
             path: 'knowledge',
             name: 'PandemicKnowledge',
             component: () => import('@/views/pandemic/knowledge.vue'),
-            meta: { title: '防控知识库', requiresAuth: true, roles: ['admin', 'donor', 'community_staff', 'hospital_user'] }
+            meta: { title: '防控知识库', requiresAuth: true, roles: ['admin', 'applicant', 'donor'] }
           }
         ]
       }

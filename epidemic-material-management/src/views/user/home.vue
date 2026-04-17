@@ -28,57 +28,18 @@
             <h3>快速操作</h3>
           </div>
           <div class="quick-actions">
-            <div class="action-card" @click="$router.push('/user/donation')">
-              <div class="action-icon" style="background: #e6f7ff;">
-                <el-icon :size="32" color="#1890ff"><Present /></el-icon>
+            <div
+              v-for="action in quickActions"
+              :key="action.path"
+              class="action-card"
+              @click="handleActionClick(action.path)"
+            >
+              <div class="action-icon" :style="{ background: action.bg }">
+                <el-icon :size="32" :color="action.color"><component :is="action.icon" /></el-icon>
               </div>
               <div class="action-info">
-                <div class="action-title">我要捐赠</div>
-                <div class="action-desc">捐赠防疫物资，共同抗疫</div>
-              </div>
-              <el-icon class="action-arrow"><ArrowRight /></el-icon>
-            </div>
-
-            <div class="action-card" @click="$router.push('/user/apply')">
-              <div class="action-icon" style="background: #f6ffed;">
-                <el-icon :size="32" color="#52c41a"><ShoppingCart /></el-icon>
-              </div>
-              <div class="action-info">
-                <div class="action-title">物资申领</div>
-                <div class="action-desc">申请所需防疫物资</div>
-              </div>
-              <el-icon class="action-arrow"><ArrowRight /></el-icon>
-            </div>
-
-            <div class="action-card" @click="$router.push('/user/my-application')">
-              <div class="action-icon" style="background: #fff7e6;">
-                <el-icon :size="32" color="#fa8c16"><Document /></el-icon>
-              </div>
-              <div class="action-info">
-                <div class="action-title">我的申请</div>
-                <div class="action-desc">查看申领进度</div>
-              </div>
-              <el-icon class="action-arrow"><ArrowRight /></el-icon>
-            </div>
-
-            <div class="action-card" @click="$router.push('/user/my-donation')">
-              <div class="action-icon" style="background: #fff1f0;">
-                <el-icon :size="32" color="#f5222d"><Medal /></el-icon>
-              </div>
-              <div class="action-info">
-                <div class="action-title">我的捐赠</div>
-                <div class="action-desc">查看捐赠记录</div>
-              </div>
-              <el-icon class="action-arrow"><ArrowRight /></el-icon>
-            </div>
-
-            <div class="action-card" @click="$router.push('/user/track')">
-              <div class="action-icon" style="background: #f0f5ff;">
-                <el-icon :size="32" color="#722ed1"><Goods /></el-icon>
-              </div>
-              <div class="action-info">
-                <div class="action-title">物流追踪</div>
-                <div class="action-desc">追踪物资配送进度</div>
+                <div class="action-title">{{ action.title }}</div>
+                <div class="action-desc">{{ action.desc }}</div>
               </div>
               <el-icon class="action-arrow"><ArrowRight /></el-icon>
             </div>
@@ -132,19 +93,37 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
 import { getUserStats } from '@/api/stats'
 import { getNewsList } from '@/api/pandemic'
 
 const router = useRouter()
+const userStore = useUserStore()
+const userRole = computed(() => userStore.userRole)
 const currentDate = computed(() => dayjs().format('YYYY年MM月DD日'))
 
-const stats = ref([
-  { label: '我的申领', value: '0', icon: 'Document', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
-  { label: '待审核', value: '0', icon: 'Clock', color: '#faad14', bgColor: '#fffbe6', iconBg: '#ffe7ba' },
-  { label: '我的捐赠', value: '0', icon: 'Present', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' }
-])
+// 根据角色动态生成统计卡片
+const stats = ref([])
+
+// 根据角色动态生成快速操作
+const quickActions = computed(() => {
+  const actions = {
+    // 申请方的快速操作
+    applicant: [
+      { title: '物资申领', desc: '申请所需防疫物资', icon: 'ShoppingCart', color: '#52c41a', bg: '#f6ffed', path: '/user/apply' },
+      { title: '我的申请', desc: '查看申领进度', icon: 'Document', color: '#fa8c16', bg: '#fff7e6', path: '/user/my-application' },
+      { title: '物流追踪', desc: '追踪物资配送进度', icon: 'Goods', color: '#722ed1', bg: '#f0f5ff', path: '/user/track' }
+    ],
+    // 捐赠方的快速操作
+    donor: [
+      { title: '我要捐赠', desc: '捐赠防疫物资，共同抗疫', icon: 'Present', color: '#1890ff', bg: '#e6f7ff', path: '/user/donation' },
+      { title: '我的捐赠', desc: '查看捐赠记录', icon: 'Medal', color: '#f5222d', bg: '#fff1f0', path: '/user/my-donation' }
+    ]
+  }
+  return actions[userRole.value] || []
+})
 
 const newsList = ref([])
 
@@ -154,9 +133,20 @@ const fetchHomeData = async () => {
     const statsRes = await getUserStats()
     if (statsRes.code === 200) {
       const data = statsRes.data
-      stats.value[0].value = (data.myApplicationCount || 0).toString()
-      stats.value[1].value = (data.pendingApplicationCount || 0).toString()
-      stats.value[2].value = (data.myDonationCount || 0).toString()
+      // 根据角色显示不同的统计信息
+      if (userRole.value === 'applicant') {
+        stats.value = [
+          { label: '我的申领', value: (data.myApplicationCount || 0).toString(), icon: 'Document', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
+          { label: '待审核', value: (data.pendingApplicationCount || 0).toString(), icon: 'Clock', color: '#faad14', bgColor: '#fffbe6', iconBg: '#ffe7ba' },
+          { label: '已通过', value: (data.approvedApplicationCount || 0).toString(), icon: 'CircleCheck', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' }
+        ]
+      } else if (userRole.value === 'donor') {
+        stats.value = [
+          { label: '我的捐赠', value: (data.myDonationCount || 0).toString(), icon: 'Present', color: '#1890ff', bgColor: '#e6f7ff', iconBg: '#bae7ff' },
+          { label: '已通过', value: (data.approvedDonationCount || 0).toString(), icon: 'CircleCheck', color: '#52c41a', bgColor: '#f6ffed', iconBg: '#d9f7be' },
+          { label: '待审核', value: (data.pendingDonationCount || 0).toString(), icon: 'Clock', color: '#faad14', bgColor: '#fffbe6', iconBg: '#ffe7ba' }
+        ]
+      }
     }
 
     // 2. Get News
@@ -164,7 +154,7 @@ const fetchHomeData = async () => {
     if (newsRes.code === 200) {
       newsList.value = (newsRes.data.list || []).map(item => ({
         id: item.id,
-        tag: '动态', // Default tag or map from item.type if available
+        tag: '动态',
         tagType: 'blue',
         title: item.title,
         time: item.publishTime ? dayjs(item.publishTime).format('YYYY-MM-DD') : '-'
@@ -181,6 +171,10 @@ const handleViewNews = (news) => {
 
 const goToNewsMore = () => {
   router.push('/user/pandemic-news')
+}
+
+const handleActionClick = (path) => {
+  router.push(path)
 }
 
 onMounted(() => {

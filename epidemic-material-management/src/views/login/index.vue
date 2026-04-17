@@ -100,7 +100,7 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores'
 import { ElMessage } from 'element-plus'
-import { Lock, User, InfoFilled, FirstAidKit, OfficeBuilding, Switch, UserFilled } from '@element-plus/icons-vue'
+import { Lock, User, FirstAidKit, Switch, UserFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -111,28 +111,22 @@ const loading = ref(false)
 // 角色定义配置
 // 包含角色值、显示名称、描述和图标
 const roles = [
-  { 
-    value: 'hospital_user', 
-    label: '医院/机构', 
-    desc: '物资申领',
-    icon: FirstAidKit 
+  {
+    value: 'applicant',
+    label: '申请方',
+    desc: '医院/社区申领',
+    icon: FirstAidKit
   },
-  { 
-    value: 'community_staff', 
-    label: '社区人员', 
-    desc: '社区防控',
-    icon: OfficeBuilding 
-  },
-  { 
-    value: 'donor', 
-    label: '捐赠方', 
-    desc: '物资捐赠',
-    icon: UserFilled 
+  {
+    value: 'donor',
+    label: '捐赠方',
+    desc: '个人/企业捐赠',
+    icon: UserFilled
   }
 ]
 
 // 响应式状态
-const selectedRole = ref('hospital_user') // 当前选中的角色
+const selectedRole = ref('applicant') // 当前选中的角色，默认为申请方
 const loginForm = reactive({
   username: '',
   password: ''

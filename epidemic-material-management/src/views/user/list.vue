@@ -28,9 +28,8 @@
         <el-form-item label="角色">
           <el-select v-model="searchForm.role" placeholder="请选择" clearable style="width: 140px">
             <el-option label="管理员" value="admin" />
-            <el-option label="物资审核员" value="material_approver" />
-            <el-option label="医院用户" value="hospital_user" />
-            <el-option label="社区人员" value="community_staff" />
+            <el-option label="申请方" value="applicant" />
+            <el-option label="捐赠方" value="donor" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
@@ -179,9 +178,8 @@
         <el-form-item label="角色" prop="role">
           <el-select v-model="form.role" placeholder="请选择角色" style="width: 100%">
             <el-option label="管理员" value="admin" />
-            <el-option label="物资审核员" value="material_approver" />
-            <el-option label="医院用户" value="hospital_user" />
-            <el-option label="社区人员" value="community_staff" />
+            <el-option label="申请方" value="applicant" />
+            <el-option label="捐赠方" value="donor" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态" v-if="dialogTitle === '编辑用户'">
@@ -280,9 +278,8 @@ const isIndeterminate = computed(() => selectedRows.value.length > 0 && selected
 const getRoleName = (role) => {
   const roleMap = {
     admin: '管理员',
-    material_approver: '物资审核员',
-    hospital_user: '医院用户',
-    community_staff: '社区人员'
+    applicant: '申请方',
+    donor: '捐赠方'
   }
   return roleMap[role] || role
 }
@@ -290,9 +287,8 @@ const getRoleName = (role) => {
 const getRoleType = (role) => {
   const typeMap = {
     admin: 'danger',
-    material_approver: 'warning',
-    hospital_user: 'success',
-    community_staff: 'info'
+    applicant: 'success',
+    donor: 'info'
   }
   return typeMap[role] || 'info'
 }

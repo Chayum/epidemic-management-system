@@ -14,6 +14,8 @@
             <el-option label="待审核" value="pending" />
             <el-option label="已通过" value="approved" />
             <el-option label="已驳回" value="rejected" />
+            <el-option label="已发货" value="delivered" />
+            <el-option label="已收货" value="received" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -44,10 +46,18 @@
             <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleView(row)">查看详情</el-button>
             <el-button type="primary" link @click="handleTrack(row)">物流追踪</el-button>
+            <el-button
+              v-if="row.status === 'delivered'"
+              type="success"
+              link
+              @click="handleConfirmReceive(row)"
+            >
+              确认收货
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -88,8 +98,8 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { getMyApplications } from '@/api/application'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getMyApplications, confirmReceive } from '@/api/application'
 import dayjs from 'dayjs'
 
 const router = useRouter()
@@ -133,7 +143,14 @@ const getUrgencyText = (urgency) => {
  * 获取状态标签类型
  */
 const getStatusType = (status) => {
-  const typeMap = { pending: 'warning', approved: 'success', rejected: 'danger', cancelled: 'info' }
+  const typeMap = {
+    pending: 'warning',
+    approved: 'success',
+    rejected: 'danger',
+    cancelled: 'info',
+    delivered: 'primary',
+    received: ''
+  }
   return typeMap[status] || 'info'
 }
 
@@ -141,7 +158,14 @@ const getStatusType = (status) => {
  * 获取状态显示文本
  */
 const getStatusText = (status) => {
-  const textMap = { pending: '待审核', approved: '已通过', rejected: '已驳回', cancelled: '已取消' }
+  const textMap = {
+    pending: '待审核',
+    approved: '已通过',
+    rejected: '已驳回',
+    cancelled: '已取消',
+    delivered: '已发货',
+    received: '已收货'
+  }
   return textMap[status] || '未知状态'
 }
 
@@ -230,6 +254,31 @@ const handleTrack = (row) => {
   } else {
     ElMessage.warning('申请未通过审核，无法追踪')
   }
+}
+
+/**
+ * 确认收货
+ * 将申请状态从 delivered 更新为 received
+ */
+const handleConfirmReceive = (row) => {
+  ElMessageBox.confirm('确认已收到物资吗？', '确认收货', {
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+    type: 'info'
+  }).then(async () => {
+    try {
+      const res = await confirmReceive(row.id)
+      if (res.code === 200) {
+        ElMessage.success('确认收货成功')
+        fetchData() // 刷新列表
+      } else {
+        ElMessage.error(res.message || '确认收货失败')
+      }
+    } catch (error) {
+      console.error('确认收货出错', error)
+      ElMessage.error('确认收货失败')
+    }
+  }).catch(() => {})
 }
 
 onMounted(() => {

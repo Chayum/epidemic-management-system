@@ -115,8 +115,7 @@ export const getUrgencyType = (urgency) => {
 export const getRoleName = (role) => {
   const roleMap = {
     admin: '管理员',
-    hospital_user: '医院用户',
-    community_staff: '社区人员',
+    applicant: '申请方',
     donor: '捐赠方'
   }
   return roleMap[role] || role
@@ -126,8 +125,7 @@ export const getRoleName = (role) => {
 export const getRoleType = (role) => {
   const typeMap = {
     admin: 'danger',
-    hospital_user: 'success',
-    community_staff: 'warning',
+    applicant: 'success',
     donor: 'info'
   }
   return typeMap[role] || ''

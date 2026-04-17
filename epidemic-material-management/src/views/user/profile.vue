@@ -232,8 +232,7 @@ const formatCreateTime = computed(() => {
 
 const getRoleName = (role) => {
   const roleMap = {
-    hospital_user: '医院用户',
-    community_staff: '社区人员',
+    applicant: '申请方',
     donor: '捐赠方',
     admin: '管理员'
   }
@@ -242,8 +241,7 @@ const getRoleName = (role) => {
 
 const getRoleType = (role) => {
   const typeMap = {
-    hospital_user: 'success',
-    community_staff: 'warning',
+    applicant: 'success',
     donor: 'info',
     admin: 'danger'
   }

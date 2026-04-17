@@ -29,7 +29,7 @@ public class PushMessage implements Serializable {
     /** 推送内容 */
     private String content;
 
-    /** 推送目标（all/hospital_user/community_staff/material_approver） */
+    /** 推送目标：all-全部用户，applicant-申请方，donor-捐赠方 */
     private String target;
 
     /** 推送渠道列表（逗号分隔） */
