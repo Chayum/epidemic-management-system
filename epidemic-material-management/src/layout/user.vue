@@ -18,6 +18,7 @@
             <el-menu-item v-if="canDonate" index="/user/donation">我要捐赠</el-menu-item>
             <el-menu-item v-if="canApply" index="/user/apply">物资申领</el-menu-item>
             <el-menu-item v-if="canApply" index="/user/my-application">我的申请</el-menu-item>
+            <el-menu-item v-if="canApply" index="/user/track">物流追踪</el-menu-item>
             <el-menu-item v-if="canDonate" index="/user/my-donation">我的捐赠</el-menu-item>
           </el-menu>
           <el-dropdown @command="handleCommand">

@@ -116,11 +116,19 @@ public class StatsController {
     public Result<Map<String, Object>> getUserStats() throws Exception {
         Long userId = UserContext.getUserId();
 
-        // 使用并行查询优化，5个统计查询同时执行
+        // 使用并行查询优化，所有统计查询同时执行
+        // 申领统计
         CompletableFuture<Long> myAppCountFuture = CompletableFuture.supplyAsync(() ->
             applicationService.count(new LambdaQueryWrapper<Application>().eq(Application::getApplicantId, userId)));
         CompletableFuture<Long> pendingAppCountFuture = CompletableFuture.supplyAsync(() ->
             applicationService.count(new LambdaQueryWrapper<Application>().eq(Application::getApplicantId, userId).eq(Application::getStatus, "pending")));
+        // 已通过状态：approved, delivered, received 都属于已通过
+        CompletableFuture<Long> approvedAppCountFuture = CompletableFuture.supplyAsync(() ->
+            applicationService.count(new LambdaQueryWrapper<Application>()
+                .eq(Application::getApplicantId, userId)
+                .in(Application::getStatus, "approved", "delivered", "received")));
+
+        // 捐赠统计
         CompletableFuture<Long> myDonationCountFuture = CompletableFuture.supplyAsync(() ->
             donationService.count(new LambdaQueryWrapper<Donation>().eq(Donation::getDonorId, userId)));
         CompletableFuture<Long> pendingDonationCountFuture = CompletableFuture.supplyAsync(() ->
@@ -129,15 +137,16 @@ public class StatsController {
             donationService.count(new LambdaQueryWrapper<Donation>().eq(Donation::getDonorId, userId).eq(Donation::getStatus, "approved")));
 
         // 等待所有并行任务完成
-        CompletableFuture.allOf(myAppCountFuture, pendingAppCountFuture, myDonationCountFuture,
-            pendingDonationCountFuture, approvedDonationCountFuture).join();
+        CompletableFuture.allOf(myAppCountFuture, pendingAppCountFuture, approvedAppCountFuture,
+            myDonationCountFuture, pendingDonationCountFuture, approvedDonationCountFuture).join();
 
         Map<String, Object> data = new HashMap<>();
         data.put("myApplicationCount", myAppCountFuture.get());
         data.put("pendingApplicationCount", pendingAppCountFuture.get());
+        data.put("approvedApplicationCount", approvedAppCountFuture.get());
         data.put("myDonationCount", myDonationCountFuture.get());
-        data.put("myPendingDonationCount", pendingDonationCountFuture.get());
-        data.put("myApprovedDonationCount", approvedDonationCountFuture.get());
+        data.put("pendingDonationCount", pendingDonationCountFuture.get());
+        data.put("approvedDonationCount", approvedDonationCountFuture.get());
 
         return Result.success(data);
     }

@@ -61,6 +61,9 @@ public class ApplicationVO implements Serializable {
     @Schema(description = "审批人ID")
     private Long approverId;
 
+    @Schema(description = "审批人姓名")
+    private String approverName;
+
     @Schema(description = "审批备注")
     private String approveRemark;
 

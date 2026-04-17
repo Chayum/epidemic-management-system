@@ -60,7 +60,7 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
 
     /**
      * 分页查询申请列表
-     * 支持根据状态和申请人ID进行筛选
+     * 支持根据状态（单状态或多状态）和申请人ID进行筛选
      *
      * @param queryDTO 查询参数DTO
      * @return 申请记录VO分页对象
@@ -69,21 +69,26 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
     public PageResult<ApplicationVO> getApplicationList(ApplicationQueryDTO queryDTO) {
         Page<Application> pageParam = new Page<>(queryDTO.getPage(), queryDTO.getSize());
         LambdaQueryWrapper<Application> wrapper = new LambdaQueryWrapper<>();
-        
-        // 构建查询条件
+
+        // 构建查询条件 - 支持单状态或多状态查询
         if (StringUtils.hasText(queryDTO.getStatus())) {
+            // 单状态查询
             wrapper.eq(Application::getStatus, queryDTO.getStatus());
+        } else if (StringUtils.hasText(queryDTO.getStatuses())) {
+            // 多状态查询（逗号分隔）
+            String[] statusArray = queryDTO.getStatuses().split(",");
+            wrapper.in(Application::getStatus, (Object[]) statusArray);
         }
         if (queryDTO.getApplicantId() != null) {
             wrapper.eq(Application::getApplicantId, queryDTO.getApplicantId());
         }
-        
+
         // 按申请时间倒序排列
         wrapper.orderByDesc(Application::getApplyTime);
-        
+
         Page<Application> result = baseMapper.selectPage(pageParam, wrapper);
         List<ApplicationVO> voList = applicationConverter.toVOList(result.getRecords());
-        
+
         return PageResult.of(voList, result.getTotal(), queryDTO.getPage(), queryDTO.getSize());
     }
 
@@ -360,6 +365,55 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
         addTrackRecord(applicationId, "received", "申请人确认收货", userId, application.getApplicantName());
 
         log.info("用户[{}]确认收货，申请单: {}", userId, applicationId);
+    }
+
+    /**
+     * 更新申请状态（管理员）
+     * 管理员手动更新物流状态，支持 approved -> delivered -> received 流转
+     *
+     * @param applicationId 申请单ID
+     * @param status 新状态（delivered/received）
+     * @param operatorId 操作人ID
+     * @param operatorName 操作人姓名
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateApplicationStatus(String applicationId, String status, Long operatorId, String operatorName) {
+        // 1. 查询申请单
+        Application application = baseMapper.selectById(applicationId);
+        if (application == null) {
+            throw new BusinessException("申请单不存在");
+        }
+
+        // 2. 验证状态流转是否合法：approved -> delivered -> received
+        String currentStatus = application.getStatus();
+        if ("approved".equals(currentStatus) && !"delivered".equals(status)) {
+            throw new BusinessException("已通过的申请只能更新为已发货");
+        }
+        if ("delivered".equals(currentStatus) && !"received".equals(status)) {
+            throw new BusinessException("已发货的申请只能更新为已收货");
+        }
+        // 不允许其他状态流转
+        if (!"approved".equals(currentStatus) && !"delivered".equals(currentStatus)) {
+            throw new BusinessException("当前状态不允许更新，仅支持已通过或已发货状态");
+        }
+
+        // 3. 更新状态
+        application.setStatus(status);
+        baseMapper.updateById(application);
+
+        // 4. 添加追踪记录
+        String description;
+        if ("delivered".equals(status)) {
+            description = "物资已发货，正在配送中";
+        } else if ("received".equals(status)) {
+            description = "物资已签收";
+        } else {
+            description = "状态更新为: " + status;
+        }
+        addTrackRecord(applicationId, status, description, operatorId, operatorName);
+
+        log.info("管理员[{}]更新申请[{}]状态: {} -> {}", operatorId, applicationId, currentStatus, status);
     }
 
     /**

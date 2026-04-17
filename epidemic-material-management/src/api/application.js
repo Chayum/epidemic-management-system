@@ -112,3 +112,18 @@ export const confirmReceive = (id) => {
     method: 'post'
   })
 }
+
+/**
+ * 更新申请状态（管理员）
+ * 用于管理员手动更新物流状态：approved -> delivered -> received
+ * @param {string} id - 申请ID
+ * @param {string} status - 新状态（delivered/received）
+ * @returns {Promise} Axios Promise对象
+ */
+export const updateApplicationStatus = (id, status) => {
+  return request({
+    url: `/application/${id}/status`,
+    method: 'put',
+    params: { status }
+  })
+}

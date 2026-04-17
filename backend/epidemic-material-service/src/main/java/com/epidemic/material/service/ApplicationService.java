@@ -86,4 +86,14 @@ public interface ApplicationService extends IService<Application> {
      * @param userId 操作用户ID
      */
     void confirmReceive(String applicationId, Long userId);
+
+    /**
+     * 更新申请状态（管理员）
+     * 用于管理员手动更新物流状态：approved -> delivered -> received
+     * @param applicationId 申请单ID
+     * @param status 新状态（delivered/received）
+     * @param operatorId 操作人ID
+     * @param operatorName 操作人姓名
+     */
+    void updateApplicationStatus(String applicationId, String status, Long operatorId, String operatorName);
 }

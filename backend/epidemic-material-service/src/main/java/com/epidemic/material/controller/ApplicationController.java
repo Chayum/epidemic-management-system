@@ -145,4 +145,25 @@ public class ApplicationController {
         applicationService.confirmReceive(decodedId, userId);
         return Result.success("确认收货成功");
     }
+
+    /**
+     * 更新申请状态（管理员）
+     * 用于管理员手动更新物流状态：approved -> delivered -> received
+     * @param id 申请ID
+     * @param status 新状态（delivered/received）
+     * @return 更新结果消息
+     */
+    @Operation(summary = "更新申请状态（管理员）")
+    @PutMapping("/{id}/status")
+    @OperateLog(module = "物资申请", operation = "更新状态")
+    public Result<String> updateStatus(
+            @PathVariable String id,
+            @RequestParam String status) {
+        // URL解码，防止+号被解析为空格（UUID中可能包含+字符）
+        String decodedId = java.net.URLDecoder.decode(id, java.nio.charset.StandardCharsets.UTF_8);
+        Long userId = UserContext.getUserId();
+        String username = UserContext.getUsernameOrDefault("Admin_");
+        applicationService.updateApplicationStatus(decodedId, status, userId, username);
+        return Result.success("状态更新成功");
+    }
 }

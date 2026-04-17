@@ -21,6 +21,9 @@ public class ApplicationQueryDTO implements Serializable {
     @Schema(description = "申请状态")
     private String status;
 
+    @Schema(description = "申请状态列表（支持多状态查询，逗号分隔）")
+    private String statuses;
+
     @Schema(description = "申请人ID")
     private Long applicantId;
 

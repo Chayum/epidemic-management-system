@@ -46,10 +46,19 @@
             <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleView(row)">查看详情</el-button>
-            <el-button type="primary" link @click="handleTrack(row)">物流追踪</el-button>
+            <!-- 已通过/已发货/已收货状态都可以查看物流追踪 -->
+            <el-button
+              v-if="['approved', 'delivered', 'received'].includes(row.status)"
+              type="primary"
+              link
+              @click="handleTrack(row)"
+            >
+              物流追踪
+            </el-button>
+            <!-- 已发货状态显示确认收货按钮 -->
             <el-button
               v-if="row.status === 'delivered'"
               type="success"
@@ -245,15 +254,11 @@ const handleView = (row) => {
 
 /**
  * 物流追踪
- * 跳转到追踪页面（需后端接口支持）
+ * 跳转到追踪页面查看物流详情
  */
 const handleTrack = (row) => {
-  if (row.status === 'approved') {
-    // 实际项目中应跳转到物流详情页或弹窗显示
-    router.push(`/user/track?id=${row.id}`)
-  } else {
-    ElMessage.warning('申请未通过审核，无法追踪')
-  }
+  // 已通过/已发货/已收货状态都可以查看物流追踪
+  router.push(`/user/track?id=${row.id}`)
 }
 
 /**

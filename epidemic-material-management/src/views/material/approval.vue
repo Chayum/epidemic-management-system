@@ -55,9 +55,7 @@
             <el-table-column prop="receiverPhone" label="收货电话" width="130" />
             <el-table-column prop="status" label="审核状态" width="100">
               <template #default="scope">
-                <el-tag :type="scope.row.status === 'approved' ? 'success' : 'danger'">
-                  {{ scope.row.status === 'approved' ? '已通过' : '已驳回' }}
-                </el-tag>
+                <el-tag :type="getStatusType(scope.row.status)">{{ getStatusText(scope.row.status) }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="approveTime" label="审核时间" width="160">
@@ -65,6 +63,19 @@
             </el-table-column>
             <el-table-column prop="approverName" label="审核人" width="100" />
             <el-table-column prop="approveRemark" label="审核备注" />
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="scope">
+                <!-- 仅对 approved 或 delivered 状态显示更新状态按钮 -->
+                <el-button
+                  v-if="scope.row.status === 'approved' || scope.row.status === 'delivered'"
+                  type="primary"
+                  link
+                  @click="handleUpdateStatus(scope.row)"
+                >
+                  更新状态
+                </el-button>
+              </template>
+            </el-table-column>
           </el-table>
           <div class="pagination-container">
             <el-pagination
@@ -162,13 +173,38 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 更新状态弹窗 -->
+    <el-dialog v-model="statusDialogVisible" title="更新物流状态" width="500px">
+      <el-form :model="statusForm" label-width="100px">
+        <el-form-item label="申请单号">
+          <span>{{ statusForm.id }}</span>
+        </el-form-item>
+        <el-form-item label="当前状态">
+          <el-tag :type="getStatusType(statusForm.currentStatus)">{{ getStatusText(statusForm.currentStatus) }}</el-tag>
+        </el-form-item>
+        <el-form-item label="更新为">
+          <el-radio-group v-model="statusForm.newStatus">
+            <!-- 根据当前状态决定可选的新状态 -->
+            <el-radio v-if="statusForm.currentStatus === 'approved'" label="delivered">已发货</el-radio>
+            <el-radio v-if="statusForm.currentStatus === 'delivered'" label="received">已收货</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="statusDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="confirmUpdateStatus" :loading="submitting">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getApplicationList, approveApplication } from '@/api/application'
+import { getApplicationList, approveApplication, updateApplicationStatus } from '@/api/application'
 import { getDonationList, approveDonation } from '@/api/donation'
 import dayjs from 'dayjs'
 
@@ -198,6 +234,14 @@ const approveForm = reactive({
   type: '', // application or donation
   status: '',
   remark: ''
+})
+
+// 更新状态表单
+const statusDialogVisible = ref(false)
+const statusForm = reactive({
+  id: '',
+  currentStatus: '',
+  newStatus: ''
 })
 
 const fetchApplications = async () => {
@@ -238,31 +282,30 @@ const fetchDonations = async () => {
   }
 }
 
-// 获取已审核的申请记录
+// 获取已审核的申请记录（包含所有已处理状态）
 const fetchApplicationRecords = async () => {
   recordLoading.value = true
   try {
-    // 获取已通过的申请
-    const approvedRes = await getApplicationList({
-      page: appRecordPage.page,
-      size: appRecordPage.size,
-      status: 'approved'
-    })
-    // 获取已驳回的申请
-    const rejectedRes = await getApplicationList({
-      page: appRecordPage.page,
-      size: appRecordPage.size,
-      status: 'rejected'
-    })
+    // 获取所有非待审核状态的申请记录
+    // 分别查询各状态然后合并
+    const [approvedRes, deliveredRes, receivedRes, rejectedRes] = await Promise.all([
+      getApplicationList({ page: 1, size: 100, status: 'approved' }),
+      getApplicationList({ page: 1, size: 100, status: 'delivered' }),
+      getApplicationList({ page: 1, size: 100, status: 'received' }),
+      getApplicationList({ page: 1, size: 100, status: 'rejected' })
+    ])
 
-    let approvedList = approvedRes.data?.list || []
-    let rejectedList = rejectedRes.data?.list || []
+    const approvedList = approvedRes.data?.list || []
+    const deliveredList = deliveredRes.data?.list || []
+    const receivedList = receivedRes.data?.list || []
+    const rejectedList = rejectedRes.data?.list || []
 
-    // 合并列表
-    applicationRecordList.value = [...approvedList, ...rejectedList]
-    const totalApproved = approvedRes.data?.total || 0
-    const totalRejected = rejectedRes.data?.total || 0
-    appRecordPage.total = totalApproved + totalRejected
+    // 合并列表并按时间排序
+    const allRecords = [...approvedList, ...deliveredList, ...receivedList, ...rejectedList]
+    allRecords.sort((a, b) => new Date(b.applyTime) - new Date(a.applyTime))
+
+    applicationRecordList.value = allRecords
+    appRecordPage.total = allRecords.length
   } catch (error) {
     console.error('获取申请审核记录失败', error)
   } finally {
@@ -380,6 +423,69 @@ const getUrgencyText = (urgency) => {
     critical: '紧急'
   }
   return map[urgency] || urgency
+}
+
+/**
+ * 获取申请状态标签类型
+ */
+const getStatusType = (status) => {
+  const map = {
+    pending: 'warning',
+    approved: 'primary',
+    delivered: 'success',
+    received: 'success',
+    rejected: 'danger'
+  }
+  return map[status] || 'info'
+}
+
+/**
+ * 获取申请状态文本
+ */
+const getStatusText = (status) => {
+  const map = {
+    pending: '待审核',
+    approved: '已通过',
+    delivered: '已发货',
+    received: '已收货',
+    rejected: '已驳回'
+  }
+  return map[status] || status
+}
+
+/**
+ * 打开更新状态弹窗
+ */
+const handleUpdateStatus = (row) => {
+  statusForm.id = row.id
+  statusForm.currentStatus = row.status
+  // 默认选择下一个状态
+  if (row.status === 'approved') {
+    statusForm.newStatus = 'delivered'
+  } else if (row.status === 'delivered') {
+    statusForm.newStatus = 'received'
+  }
+  statusDialogVisible.value = true
+}
+
+/**
+ * 确认更新状态
+ */
+const confirmUpdateStatus = async () => {
+  submitting.value = true
+  try {
+    const res = await updateApplicationStatus(statusForm.id, statusForm.newStatus)
+    if (res.code === 200) {
+      ElMessage.success('状态更新成功')
+      statusDialogVisible.value = false
+      // 刷新列表
+      fetchApplicationRecords()
+    }
+  } catch (error) {
+    ElMessage.error('操作失败')
+  } finally {
+    submitting.value = false
+  }
 }
 
 const formatDate = (date) => {
