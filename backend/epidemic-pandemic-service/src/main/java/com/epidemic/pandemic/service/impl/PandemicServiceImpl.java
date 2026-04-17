@@ -105,44 +105,6 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
     }
 
     @Override
-    public PageResult<Map<String, Object>> getKnowledgeList(Integer page, Integer size) {
-        // Mock implementation for Knowledge as it's not fully defined in DB schema
-        List<Map<String, Object>> list = new ArrayList<>();
-
-        Map<String, Object> knowledge1 = new HashMap<>();
-        knowledge1.put("id", "K001");
-        knowledge1.put("title", "如何正确佩戴N95口罩");
-        knowledge1.put("summary", "正确佩戴N95口罩是预防呼吸道传染病的重要措施，请按照以下步骤操作。");
-        knowledge1.put("category", "personal");
-        knowledge1.put("author", "疾控中心");
-        knowledge1.put("viewCount", 3250);
-        knowledge1.put("sortOrder", 1);
-        list.add(knowledge1);
-
-        Map<String, Object> knowledge2 = new HashMap<>();
-        knowledge2.put("id", "K002");
-        knowledge2.put("title", "家庭日常消毒指南");
-        knowledge2.put("summary", "家庭日常消毒是预防疫情的重要环节，请了解以下消毒方法和注意事项。");
-        knowledge2.put("category", "community");
-        knowledge2.put("author", "疾控中心");
-        knowledge2.put("viewCount", 2180);
-        knowledge2.put("sortOrder", 2);
-        list.add(knowledge2);
-
-        Map<String, Object> knowledge3 = new HashMap<>();
-        knowledge3.put("id", "K003");
-        knowledge3.put("title", "医疗机构内个人防护要点");
-        knowledge3.put("summary", "医疗机构内工作人员应严格做好个人防护，防止职业暴露。");
-        knowledge3.put("category", "hospital");
-        knowledge3.put("author", "卫健委");
-        knowledge3.put("viewCount", 1680);
-        knowledge3.put("sortOrder", 3);
-        list.add(knowledge3);
-
-        return PageResult.of(list, (long) list.size(), page, size);
-    }
-
-    @Override
     public Map<String, Object> getPandemicData() {
         Map<String, Object> data = new HashMap<>();
         data.put("confirmed", 156);
@@ -237,7 +199,6 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
             map.put("id", record.getId());
             map.put("title", record.getTitle());
             map.put("target", convertTargetName(record.getTarget()));
-            map.put("channelList", record.getChannels() != null ? record.getChannels().split(",") : new String[]{});
             map.put("time", record.getPushTime() != null ? record.getPushTime().format(formatter) : "");
             map.put("status", "success".equals(record.getStatus()) ? "成功" : "失败");
             return map;
@@ -262,13 +223,7 @@ public class PandemicServiceImpl extends ServiceImpl<PandemicNewsMapper, Pandemi
         record.setTitle((String) pushData.get("title"));
         record.setContent((String) pushData.get("content"));
         record.setTarget((String) pushData.get("target"));
-
-        @SuppressWarnings("unchecked")
-        List<String> channels = (List<String>) pushData.get("channel");
-        if (channels != null && !channels.isEmpty()) {
-            record.setChannels(String.join(",", channels));
-        }
-
+        record.setChannels("WEB"); // 默认站内通知
         record.setStatus("success");
         record.setPushTime(LocalDateTime.now());
         record.setCreateTime(LocalDateTime.now());

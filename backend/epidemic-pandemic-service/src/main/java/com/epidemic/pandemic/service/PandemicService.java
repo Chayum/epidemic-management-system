@@ -29,14 +29,6 @@ public interface PandemicService extends IService<PandemicNews> {
     void publishNews(PandemicNews news);
 
     /**
-     * 获取防疫知识列表
-     * @param page 页码
-     * @param size 每页数量
-     * @return 分页结果
-     */
-    PageResult<Map<String, Object>> getKnowledgeList(Integer page, Integer size);
-
-    /**
      * 获取实时疫情数据
      * @return 疫情数据
      */

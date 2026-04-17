@@ -57,7 +57,6 @@
           </template>
           <el-menu-item index="/pandemic/news">疫情动态</el-menu-item>
           <el-menu-item index="/pandemic/push">消息推送</el-menu-item>
-          <el-menu-item index="/pandemic/knowledge">防控知识库</el-menu-item>
         </el-sub-menu>
       </el-menu>
       

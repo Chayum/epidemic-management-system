@@ -28,11 +28,6 @@
           <el-table :data="pushRecords" style="width: 100%" :scroll-x="true">
             <el-table-column prop="title" label="推送标题" min-width="150" show-overflow-tooltip />
             <el-table-column prop="target" label="推送对象" min-width="120" show-overflow-tooltip />
-            <el-table-column prop="channel" label="推送渠道" min-width="100" show-overflow-tooltip>
-              <template #default="{ row }">
-                <el-tag v-for="ch in row.channelList" :key="ch" size="small" style="margin-right: 4px">{{ ch }}</el-tag>
-              </template>
-            </el-table-column>
             <el-table-column prop="time" label="推送时间" min-width="160" show-overflow-tooltip />
             <el-table-column prop="status" label="状态" min-width="80" show-overflow-tooltip>
               <template #default="{ row }">
@@ -83,13 +78,6 @@
             <el-option label="捐赠方" value="donor" />
           </el-select>
         </el-form-item>
-        <el-form-item label="推送渠道" prop="channel">
-          <el-checkbox-group v-model="form.channel">
-            <el-checkbox label="APP">APP通知</el-checkbox>
-            <el-checkbox label="SMS">短信</el-checkbox>
-            <el-checkbox label="WEB">网页</el-checkbox>
-          </el-checkbox-group>
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -113,15 +101,13 @@ const roleChartRef = ref(null)
 const form = reactive({
   title: '',
   content: '',
-  target: '',
-  channel: []
+  target: ''
 })
 
 const formRules = {
   title: [{ required: true, message: '请输入推送标题', trigger: 'blur' }],
   content: [{ required: true, message: '请输入推送内容', trigger: 'blur' }],
-  target: [{ required: true, message: '请选择推送对象', trigger: 'change' }],
-  channel: [{ type: 'array', required: true, message: '请选择推送渠道', trigger: 'change' }]
+  target: [{ required: true, message: '请选择推送对象', trigger: 'change' }]
 }
 
 const pushStats = ref([])
@@ -225,7 +211,7 @@ const initRoleChart = (data) => {
 }
 
 const handlePush = () => {
-  Object.assign(form, { title: '', content: '', target: '', channel: [] })
+  Object.assign(form, { title: '', content: '', target: '' })
   dialogVisible.value = true
 }
 

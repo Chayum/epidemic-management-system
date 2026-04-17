@@ -178,12 +178,6 @@ const routes = [
             name: 'PandemicPush',
             component: () => import('@/views/pandemic/push.vue'),
             meta: { title: '消息推送', requiresAuth: true, roles: ['admin'] }
-          },
-          {
-            path: 'knowledge',
-            name: 'PandemicKnowledge',
-            component: () => import('@/views/pandemic/knowledge.vue'),
-            meta: { title: '防控知识库', requiresAuth: true, roles: ['admin', 'applicant', 'donor'] }
           }
         ]
       }

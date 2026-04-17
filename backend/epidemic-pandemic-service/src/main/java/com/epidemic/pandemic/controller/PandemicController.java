@@ -57,14 +57,6 @@ public class PandemicController {
         return Result.success("删除成功");
     }
 
-    @Operation(summary = "获取防疫知识列表")
-    @GetMapping("/knowledge")
-    public Result<PageResult<Map<String, Object>>> getKnowledgeList(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "10") Integer size) {
-        return Result.success(pandemicService.getKnowledgeList(page, size));
-    }
-
     @Operation(summary = "获取实时疫情数据")
     @GetMapping("/data")
     public Result<Map<String, Object>> getPandemicData() {

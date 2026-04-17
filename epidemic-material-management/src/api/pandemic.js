@@ -56,49 +56,6 @@ export const deleteNews = (id) => {
 }
 
 /**
- * 获取防疫知识列表
- * @param {Object} params - 查询参数
- * @param {number} params.page - 页码
- * @param {number} params.size - 每页大小
- * @returns {Promise} Axios Promise对象
- */
-export const getKnowledgeList = (params) => {
-  return request({
-    url: '/pandemic/knowledge',
-    method: 'get',
-    params
-  })
-}
-
-/**
- * 获取知识详情
- * @param {string} id - 知识ID
- * @returns {Promise} Axios Promise对象
- */
-export const getKnowledgeDetail = (id) => {
-  return request({
-    url: `/pandemic/knowledge/${id}`,
-    method: 'get'
-  })
-}
-
-/**
- * 发布知识
- * @param {Object} data - 知识数据
- * @param {string} data.title - 标题
- * @param {string} data.category - 分类
- * @param {string} data.content - 内容
- * @returns {Promise} Axios Promise对象
- */
-export const publishKnowledge = (data) => {
-  return request({
-    url: '/pandemic/knowledge',
-    method: 'post',
-    data
-  })
-}
-
-/**
  * 获取实时疫情数据
  * @returns {Promise} Axios Promise对象
  */
