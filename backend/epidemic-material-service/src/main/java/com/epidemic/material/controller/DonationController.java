@@ -7,9 +7,7 @@ import com.epidemic.common.annotation.OperateLog;
 import com.epidemic.material.dto.DonationApproveDTO;
 import com.epidemic.material.dto.DonationQueryDTO;
 import com.epidemic.material.dto.DonationSubmitDTO;
-import com.epidemic.material.entity.DonationCertificate;
 import com.epidemic.material.service.DonationService;
-import com.epidemic.material.service.DonationCertificateService;
 import com.epidemic.material.vo.DonationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,9 +28,6 @@ public class DonationController {
 
     @Autowired
     private DonationService donationService;
-
-    @Autowired
-    private DonationCertificateService donationCertificateService;
 
 
     /**
@@ -122,20 +117,5 @@ public class DonationController {
     @GetMapping("/stats")
     public Result<Map<String, Object>> stats() {
         return Result.success(donationService.getStats());
-    }
-
-    /**
-     * 获取捐赠证书
-     * @param donationId 捐赠ID
-     * @return 捐赠证书信息
-     */
-    @Operation(summary = "获取捐赠证书")
-    @GetMapping("/certificate/{donationId}")
-    public Result<DonationCertificate> getCertificate(@PathVariable String donationId) {
-        DonationCertificate certificate = donationCertificateService.getByDonationId(donationId);
-        if (certificate == null) {
-            return Result.error(404, "证书不存在，请确认捐赠已审核通过");
-        }
-        return Result.success(certificate);
     }
 }

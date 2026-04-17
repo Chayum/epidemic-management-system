@@ -66,22 +66,28 @@ public class InventoryLogServiceImpl extends ServiceImpl<InventoryLogMapper, Inv
         int todayOutbound = todayStats.getOrDefault("todayOutbound", 0);
         int yesterdayOutbound = yesterdayStats.getOrDefault("todayOutbound", 0);
 
-        // 计算入库趋势百分比
-        double inboundTrend = 0;
-        if (yesterdayInbound > 0) {
-            inboundTrend = Math.round(((double) (todayInbound - yesterdayInbound) / yesterdayInbound) * 100);
-        } else if (todayInbound > 0) {
-            inboundTrend = 100; // 昨天为0今天有数据，视为增长100%
+        // 计算入库趋势百分比（返回整数）
+        // 特殊值约定：100 表示"新增"（昨天为0今天有数据），-100 表示"归零"（昨天有数据今天为0）
+        int inboundTrend = 0;
+        if (yesterdayInbound > 0 && todayInbound > 0) {
+            // 正常计算增减百分比
+            inboundTrend = (int) Math.round(((double) (todayInbound - yesterdayInbound) / yesterdayInbound) * 100);
+        } else if (yesterdayInbound == 0 && todayInbound > 0) {
+            inboundTrend = 100; // 新增
+        } else if (yesterdayInbound > 0 && todayInbound == 0) {
+            inboundTrend = -100; // 归零
         }
         trend.put("inboundTrend", inboundTrend);
         trend.put("inboundTrendType", inboundTrend >= 0 ? "up" : "down");
 
-        // 计算出库趋势百分比
-        double outboundTrend = 0;
-        if (yesterdayOutbound > 0) {
-            outboundTrend = Math.round(((double) (todayOutbound - yesterdayOutbound) / yesterdayOutbound) * 100);
-        } else if (todayOutbound > 0) {
-            outboundTrend = 100;
+        // 计算出库趋势百分比（返回整数）
+        int outboundTrend = 0;
+        if (yesterdayOutbound > 0 && todayOutbound > 0) {
+            outboundTrend = (int) Math.round(((double) (todayOutbound - yesterdayOutbound) / yesterdayOutbound) * 100);
+        } else if (yesterdayOutbound == 0 && todayOutbound > 0) {
+            outboundTrend = 100; // 新增
+        } else if (yesterdayOutbound > 0 && todayOutbound == 0) {
+            outboundTrend = -100; // 归零
         }
         trend.put("outboundTrend", outboundTrend);
         trend.put("outboundTrendType", outboundTrend >= 0 ? "up" : "down");

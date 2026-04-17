@@ -281,9 +281,9 @@ public class StatsController {
 
         // 出入库趋势（与昨日对比）
         Map<String, Object> statsTrend = inventoryLogService.getStatsTrend();
-        coreMetrics.setTodayInboundTrend(((Double) statsTrend.get("inboundTrend")).intValue());
+        coreMetrics.setTodayInboundTrend(((Number) statsTrend.get("inboundTrend")).intValue());
         coreMetrics.setTodayInboundTrendType((String) statsTrend.get("inboundTrendType"));
-        coreMetrics.setTodayOutboundTrend(((Double) statsTrend.get("outboundTrend")).intValue());
+        coreMetrics.setTodayOutboundTrend(((Number) statsTrend.get("outboundTrend")).intValue());
         coreMetrics.setTodayOutboundTrendType((String) statsTrend.get("outboundTrendType"));
 
         // 物资总量趋势（暂设为0，实际可按需计算）

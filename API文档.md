@@ -3,8 +3,8 @@
 ## 文档信息
 
 - 项目名称：疫情防控物资调度管理系统
-- 文档版本：v2.0.0
-- 最后更新：2026-03-30
+- 文档版本：v2.1.0
+- 最后更新：2026-04-17
 - 后端技术栈：Spring Cloud Alibaba 微服务架构 + MySQL + Redis + RabbitMQ
 - 前端技术栈：Vue 3 + Element Plus + Pinia + ECharts
 - 服务架构：网关(Gateway) + 用户服务 + 物资服务 + 疫情服务 + 公共模块

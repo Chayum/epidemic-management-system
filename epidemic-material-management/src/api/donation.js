@@ -54,8 +54,9 @@ export const submitDonation = (data) => {
  * 审核捐赠
  * @param {Object} data - 审核数据
  * @param {string} data.donationId - 捐赠ID
- * @param {boolean} data.approved - 是否通过
- * @param {string} [data.comment] - 审核意见
+ * @param {string} data.status - 审批状态（"approved" 或 "rejected"）
+ * @param {string} [data.remark] - 审核意见
+ * @param {string} [data.targetMaterialId] - 目标入库物资ID
  * @returns {Promise} Axios Promise对象
  */
 export const approveDonation = (data) => {

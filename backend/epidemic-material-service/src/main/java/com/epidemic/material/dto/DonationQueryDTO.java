@@ -32,4 +32,7 @@ public class DonationQueryDTO implements Serializable {
     
     @Schema(description = "捐赠单ID")
     private String id;
+
+    @Schema(description = "关键字搜索（捐赠单号）")
+    private String keyword;
 }

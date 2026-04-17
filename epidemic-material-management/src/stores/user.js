@@ -8,12 +8,12 @@ import { login as loginApi, getUserInfo as getUserInfoApi } from '@/api/auth'
 
 export const useUserStore = defineStore('user', () => {
   // --- State ---
-  
-  // 用户 Token，优先从 localStorage 读取以保持持久化
-  const token = ref(localStorage.getItem('token') || '')
-  
+
+  // 用户 Token，使用 sessionStorage 实现：每个标签页独立登录状态
+  const token = ref(sessionStorage.getItem('token') || '')
+
   // 用户基本信息对象
-  const userInfo = ref(JSON.parse(localStorage.getItem('userInfo') || '{}'))
+  const userInfo = ref(JSON.parse(sessionStorage.getItem('userInfo') || '{}'))
 
   // --- Getters ---
 
@@ -26,28 +26,30 @@ export const useUserStore = defineStore('user', () => {
   // --- Actions ---
 
   /**
-   * 设置 Token 并持久化到 localStorage
+   * 设置 Token 并持久化到 sessionStorage
+   * 使用 sessionStorage 实现：每个标签页独立登录状态
    * @param {string} newToken - 新的 Token 字符串
    */
   const setToken = (newToken) => {
     token.value = newToken
     if (newToken) {
-      localStorage.setItem('token', newToken)
+      sessionStorage.setItem('token', newToken)
     } else {
-      localStorage.removeItem('token')
+      sessionStorage.removeItem('token')
     }
   }
 
   /**
-   * 设置用户信息并持久化
+   * 设置用户信息并持久化到 sessionStorage
+   * 使用 sessionStorage 实现：每个标签页独立登录状态
    * @param {Object} info - 用户信息对象
    */
   const setUserInfo = (info) => {
     userInfo.value = info || {}
     if (info && Object.keys(info).length > 0) {
-      localStorage.setItem('userInfo', JSON.stringify(info))
+      sessionStorage.setItem('userInfo', JSON.stringify(info))
     } else {
-      localStorage.removeItem('userInfo')
+      sessionStorage.removeItem('userInfo')
     }
   }
 
@@ -105,8 +107,8 @@ export const useUserStore = defineStore('user', () => {
   const logout = () => {
     token.value = ''
     userInfo.value = {}
-    localStorage.removeItem('token')
-    localStorage.removeItem('userInfo')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('userInfo')
   }
 
   /**

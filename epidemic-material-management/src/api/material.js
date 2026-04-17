@@ -103,8 +103,9 @@ export const getWarningList = () => {
 /**
  * 盘点库存
  * @param {Object} data - 盘点数据
- * @param {string} data.materialId - 物资ID
+ * @param {string} data.inventoryId - 物资ID
  * @param {number} data.actualStock - 实际库存
+ * @param {string} [data.remark] - 盘点备注
  * @returns {Promise} Axios Promise对象
  */
 export const checkInventory = (data) => {

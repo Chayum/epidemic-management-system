@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.epidemic.material.dto.StockOrderDTO;
 import com.epidemic.material.dto.StockOrderQueryDTO;
 import com.epidemic.material.entity.*;
-import com.epidemic.material.mapper.MaterialCostMapper;
 import com.epidemic.material.mapper.StockOrderItemMapper;
 import com.epidemic.material.mapper.StockOrderMapper;
 import com.epidemic.material.service.CacheService;
@@ -24,9 +23,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import com.epidemic.material.vo.InventoryLedgerVO;
 import java.util.ArrayList;
@@ -44,7 +41,6 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
     private final StockOrderItemMapper stockOrderItemMapper;
     private final MaterialService materialService;
     private final InventoryLogService inventoryLogService;
-    private final MaterialCostMapper materialCostMapper;
 
     @Autowired
     private CacheService cacheService;
@@ -61,16 +57,8 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
             wrapper.like(Material::getName, keyword).or().like(Material::getId, keyword);
         }
         Page<Material> result = materialService.page(materialPage, wrapper);
-        
-        // 2. 批量查询成本信息（解决N+1查询问题）
-        List<String> materialIds = result.getRecords().stream()
-                .map(Material::getId)
-                .collect(Collectors.toList());
-        Map<String, MaterialCost> costMap = materialCostMapper.selectBatchIds(materialIds)
-                .stream()
-                .collect(Collectors.toMap(MaterialCost::getMaterialId, c -> c));
 
-        // 3. 组装台账信息
+        // 2. 组装台账信息
         List<InventoryLedgerVO> voList = new ArrayList<>();
         for (Material material : result.getRecords()) {
             InventoryLedgerVO vo = new InventoryLedgerVO();
@@ -82,19 +70,9 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
             vo.setThreshold(material.getThreshold());
             vo.setStatus(material.getStatus());
             vo.setWarehouse(material.getWarehouse());
-
-            // 从批量查询的Map中获取成本信息
-            MaterialCost cost = costMap.get(material.getId());
-            if (cost != null) {
-                vo.setAvgPrice(cost.getAvgPrice());
-                vo.setTotalValue(cost.getTotalValue());
-            } else {
-                vo.setAvgPrice(BigDecimal.ZERO);
-                vo.setTotalValue(BigDecimal.ZERO);
-            }
             voList.add(vo);
         }
-        
+
         Page<InventoryLedgerVO> voPage = new Page<>(page, size);
         voPage.setRecords(voList);
         voPage.setTotal(result.getTotal());
@@ -202,13 +180,13 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
         } else {
             order.setStatus("rejected");
         }
-        
+
         order.setAuditorId(userId);
         order.setAuditorName(username);
         order.setAuditTime(LocalDateTime.now());
         order.setRemark(remark); // 追加审核备注
         updateById(order);
-        
+
         // 清除物资统计和预警列表缓存
         cacheService.deleteMaterialStats();
         cacheService.deleteWarningList();
@@ -234,7 +212,7 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
         for (StockOrderItem item : items) {
             // 使用带重试机制的分布式锁保证库存操作的原子性
             String lockKey = "stock:lock:" + item.getMaterialId();
-            
+
             // 使用返回值对象，避免数组传递
             StockOperationResult result = distributedLockUtil.executeWithLockWithRetry(lockKey, () -> {
                 Material material = materialService.getById(item.getMaterialId());
@@ -248,8 +226,6 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
 
                 if ("inbound".equals(order.getType())) {
                     afterStock = currentStock + changeQty;
-                    // 更新物资成本（移动加权平均）
-                    updateMaterialCost(item.getMaterialId(), item.getPrice(), item.getQuantity(), currentStock);
                 } else if ("outbound".equals(order.getType())) {
                     if (currentStock < changeQty) {
                         throw new RuntimeException("库存不足：" + material.getName());
@@ -264,15 +240,18 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
                 // 检查预警状态
                 checkWarningStatus(material);
                 materialService.updateById(material);
-                
+
                 return new StockOperationResult(material, currentStock, afterStock, changeQty);
             });
 
             // 使用返回值对象记录日志
+            // 转换类型值：inbound->in, outbound->out，与 InventoryLog 实体定义保持一致
+            String logType = "inbound".equals(order.getType()) ? "in" :
+                             "outbound".equals(order.getType()) ? "out" : order.getType();
             inventoryLogService.log(
                     result.getMaterial().getId(),
                     result.getMaterial().getName(),
-                    order.getType(), // in/out/adjust
+                    logType,
                     "inbound".equals(order.getType()) ? result.getChangeQty() : -result.getChangeQty(),
                     result.getCurrentStock(),
                     result.getAfterStock(),
@@ -287,33 +266,6 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
         cacheService.deleteMaterialStats();
         cacheService.deleteWarningList();
         log.info("库存变动已处理，已清除相关缓存");
-    }
-
-    private void updateMaterialCost(String materialId, BigDecimal newPrice, Integer newQty, Integer oldQty) {
-        if (newPrice == null || newQty == 0) return;
-        
-        MaterialCost cost = materialCostMapper.selectById(materialId);
-        if (cost == null) {
-            cost = new MaterialCost();
-            cost.setMaterialId(materialId);
-            cost.setAvgPrice(newPrice);
-            cost.setLastPrice(newPrice);
-            cost.setTotalValue(newPrice.multiply(new BigDecimal(newQty)));
-            materialCostMapper.insert(cost);
-        } else {
-            // 计算新平均价 = (旧总值 + 新总值) / (旧数量 + 新数量)
-            BigDecimal oldTotalValue = cost.getAvgPrice().multiply(new BigDecimal(oldQty));
-            BigDecimal newTotalValue = newPrice.multiply(new BigDecimal(newQty));
-            BigDecimal totalValue = oldTotalValue.add(newTotalValue);
-            BigDecimal totalQty = new BigDecimal(oldQty + newQty);
-            
-            if (totalQty.compareTo(BigDecimal.ZERO) > 0) {
-                cost.setAvgPrice(totalValue.divide(totalQty, 2, BigDecimal.ROUND_HALF_UP));
-            }
-            cost.setLastPrice(newPrice);
-            cost.setTotalValue(cost.getAvgPrice().multiply(totalQty)); // 更新总价值 based on new avg
-            materialCostMapper.updateById(cost);
-        }
     }
 
     private void checkWarningStatus(Material material) {
@@ -333,13 +285,13 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
     public void voidOrder(String orderId, Long userId) {
         StockOrder order = getById(orderId);
         if (order == null) return;
-        
+
         if ("approved".equals(order.getStatus())) {
             // 已审核单据作废需要回滚库存，暂时简单处理为不允许作废已审核单据，或者实现反向操作
             // 根据需求，通常作废只能针对未生效单据，已生效需开红字单据
             throw new RuntimeException("已审核单据不能直接作废，请开具红字冲销单");
         }
-        
+
         order.setStatus("void");
         updateById(order);
     }

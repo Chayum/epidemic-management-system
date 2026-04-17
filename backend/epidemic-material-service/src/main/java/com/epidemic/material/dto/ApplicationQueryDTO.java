@@ -29,4 +29,7 @@ public class ApplicationQueryDTO implements Serializable {
 
     @Schema(description = "申请人姓名(模糊查询)")
     private String applicantName;
+
+    @Schema(description = "关键字搜索（申请单号/物资名称）")
+    private String keyword;
 }

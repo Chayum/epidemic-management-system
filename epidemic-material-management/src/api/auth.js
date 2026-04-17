@@ -41,8 +41,8 @@ export const getUserInfo = () => {
 /**
  * 修改密码
  * @param {Object} data - 密码修改数据
- * @param {string} data.oldPassword - 旧密码
- * @param {string} data.newPassword - 新密码
+ * @param {string} data.oldPwd - 旧密码
+ * @param {string} data.newPwd - 新密码
  * @returns {Promise} Axios Promise对象
  */
 export const changePassword = (data) => {

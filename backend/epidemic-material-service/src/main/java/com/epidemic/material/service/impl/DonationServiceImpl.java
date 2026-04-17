@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.UUID;
 import com.epidemic.material.dto.StockOrderDTO;
 import com.epidemic.material.service.StockService;
-import com.epidemic.material.service.DonationCertificateService;
-import com.epidemic.material.entity.DonationCertificate;
 import java.math.BigDecimal;
 import java.util.Collections;
 
@@ -49,9 +47,6 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
 
     @Autowired
     private StockService stockService;
-
-    @Autowired
-    private DonationCertificateService donationCertificateService;
 
     /**
      * 分页查询捐赠列表
@@ -81,7 +76,12 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
         if (StringUtils.hasText(queryDTO.getId())) {
             wrapper.eq(Donation::getId, queryDTO.getId());
         }
-        
+
+        // 关键字搜索：模糊匹配捐赠单号
+        if (StringUtils.hasText(queryDTO.getKeyword())) {
+            wrapper.like(Donation::getId, queryDTO.getKeyword());
+        }
+
         // 按捐赠时间倒序排列
         wrapper.orderByDesc(Donation::getDonateTime);
         
@@ -169,19 +169,8 @@ public class DonationServiceImpl extends ServiceImpl<DonationMapper, Donation> i
             } else {
                 log.info("捐赠[{}]审核通过，但未指定入库物资，仅记录", donation.getId());
             }
-
-            // 生成捐赠证书
-            String donorName = StringUtils.hasText(donation.getContactPerson()) ? donation.getContactPerson() : "匿名捐赠者";
-            donationCertificateService.generateCertificate(
-                    donation.getId(),
-                    donation.getDonorId(),
-                    donorName,
-                    donation.getMaterialName(),
-                    donation.getQuantity(),
-                    donation.getUnit()
-            );
         }
-        
+
         // 更新捐赠单状态
         donation.setStatus(approveDTO.getStatus());
         donation.setApproveRemark(approveDTO.getRemark());

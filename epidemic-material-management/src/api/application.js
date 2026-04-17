@@ -49,8 +49,8 @@ export const submitApplication = (data) => {
  * 审核申请
  * @param {Object} data - 审核数据
  * @param {string} data.applicationId - 申请ID
- * @param {boolean} data.approved - 是否通过
- * @param {string} [data.comment] - 审核意见
+ * @param {string} data.status - 审批状态（"approved" 或 "rejected"）
+ * @param {string} [data.remark] - 审核意见
  * @returns {Promise} Axios Promise对象
  */
 export const approveApplication = (data) => {

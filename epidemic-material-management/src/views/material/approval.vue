@@ -7,11 +7,29 @@
     <div class="card-container">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <el-tab-pane label="物资申领审核" name="application">
+          <!-- 搜索栏 -->
+          <div class="filter-bar">
+            <el-input
+              v-model="appSearchKeyword"
+              placeholder="搜索申请单号"
+              clearable
+              style="width: 250px"
+              @keyup.enter="handleAppSearch"
+              @clear="handleAppSearch"
+            >
+              <template #append>
+                <el-button @click="handleAppSearch">
+                  <el-icon><Search /></el-icon>
+                </el-button>
+              </template>
+            </el-input>
+          </div>
           <el-table :data="applicationList" v-loading="loading" style="width: 100%">
             <el-table-column prop="id" label="申请单号" width="180" />
-            <el-table-column prop="applicantId" label="申请人ID" width="120" />
-            <el-table-column prop="materialId" label="物资ID" width="120" />
-            <el-table-column prop="quantity" label="申请数量" width="120" />
+            <el-table-column prop="materialName" label="物资名称" width="150" />
+            <el-table-column prop="quantity" label="申请数量" width="120">
+              <template #default="scope">{{ scope.row.quantity }} {{ scope.row.unit }}</template>
+            </el-table-column>
             <el-table-column prop="urgency" label="紧急程度" width="120">
               <template #default="scope">
                 <el-tag :type="getUrgencyType(scope.row.urgency)">{{ getUrgencyText(scope.row.urgency) }}</el-tag>
@@ -89,6 +107,23 @@
         </el-tab-pane>
 
         <el-tab-pane label="物资捐赠审核" name="donation">
+          <!-- 搜索栏 -->
+          <div class="filter-bar">
+            <el-input
+              v-model="donSearchKeyword"
+              placeholder="搜索捐赠单号"
+              clearable
+              style="width: 250px"
+              @keyup.enter="handleDonSearch"
+              @clear="handleDonSearch"
+            >
+              <template #append>
+                <el-button @click="handleDonSearch">
+                  <el-icon><Search /></el-icon>
+                </el-button>
+              </template>
+            </el-input>
+          </div>
           <el-table :data="donationList" v-loading="loading" style="width: 100%">
             <el-table-column prop="id" label="捐赠单号" width="180" />
             <el-table-column prop="donorUnit" label="捐赠方" width="180" />
@@ -162,6 +197,27 @@
             {{ approveForm.status === 'approved' ? '通过' : '驳回' }}
           </el-tag>
         </el-form-item>
+        <!-- 捐赠接收时显示物资选择选项 -->
+        <el-form-item v-if="approveForm.type === 'donation' && approveForm.status === 'approved'">
+          <el-checkbox v-model="showMaterialSelect">指定入库物资</el-checkbox>
+        </el-form-item>
+        <el-form-item v-if="showMaterialSelect && approveForm.type === 'donation'" label="选择物资">
+          <el-select
+            v-model="approveForm.targetMaterialId"
+            placeholder="请选择入库目标物资"
+            filterable
+            clearable
+            :loading="materialLoading"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in materialList"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="备注说明">
           <el-input v-model="approveForm.remark" type="textarea" :rows="3" placeholder="请输入审核意见" />
         </el-form-item>
@@ -202,10 +258,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { getApplicationList, approveApplication, updateApplicationStatus } from '@/api/application'
 import { getDonationList, approveDonation } from '@/api/donation'
+import { getMaterialList } from '@/api/material'
 import dayjs from 'dayjs'
 
 const activeTab = ref('application')
@@ -215,6 +273,7 @@ const submitting = ref(false)
 
 const applicationList = ref([])
 const appPage = reactive({ page: 1, size: 10, total: 0 })
+const appSearchKeyword = ref('')  // 申请搜索关键字
 
 // 已审核的申请记录
 const applicationRecordList = ref([])
@@ -222,6 +281,7 @@ const appRecordPage = reactive({ page: 1, size: 10, total: 0 })
 
 const donationList = ref([])
 const donationPage = reactive({ page: 1, size: 10, total: 0 })
+const donSearchKeyword = ref('')  // 捐赠搜索关键字
 
 // 已审核的捐赠记录
 const donationRecordList = ref([])
@@ -233,8 +293,14 @@ const approveForm = reactive({
   id: '',
   type: '', // application or donation
   status: '',
-  remark: ''
+  remark: '',
+  targetMaterialId: '' // 捐赠入库目标物资ID
 })
+
+// 物资选择相关
+const materialList = ref([])
+const showMaterialSelect = ref(false)
+const materialLoading = ref(false)
 
 // 更新状态表单
 const statusDialogVisible = ref(false)
@@ -247,11 +313,16 @@ const statusForm = reactive({
 const fetchApplications = async () => {
   loading.value = true
   try {
-    const res = await getApplicationList({ 
-      page: appPage.page, 
-      size: appPage.size, 
-      status: 'pending' 
-    })
+    const params = {
+      page: appPage.page,
+      size: appPage.size,
+      status: 'pending'
+    }
+    // 添加关键字搜索
+    if (appSearchKeyword.value) {
+      params.keyword = appSearchKeyword.value
+    }
+    const res = await getApplicationList(params)
     if (res.code === 200) {
       applicationList.value = res.data.list || []
       appPage.total = res.data.total || 0
@@ -266,11 +337,16 @@ const fetchApplications = async () => {
 const fetchDonations = async () => {
   loading.value = true
   try {
-    const res = await getDonationList({
+    const params = {
       page: donationPage.page,
       size: donationPage.size,
       status: 'pending'
-    })
+    }
+    // 添加关键字搜索
+    if (donSearchKeyword.value) {
+      params.keyword = donSearchKeyword.value
+    }
+    const res = await getDonationList(params)
     if (res.code === 200) {
       donationList.value = res.data.list || []
       donationPage.total = res.data.total || 0
@@ -280,6 +356,22 @@ const fetchDonations = async () => {
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * 申请搜索处理
+ */
+const handleAppSearch = () => {
+  appPage.page = 1
+  fetchApplications()
+}
+
+/**
+ * 捐赠搜索处理
+ */
+const handleDonSearch = () => {
+  donationPage.page = 1
+  fetchDonations()
 }
 
 // 获取已审核的申请记录（包含所有已处理状态）
@@ -370,8 +462,34 @@ const handleApproveDonation = (row, status) => {
   approveForm.type = 'donation'
   approveForm.status = status
   approveForm.remark = ''
+  approveForm.targetMaterialId = ''
+  showMaterialSelect.value = false
   dialogVisible.value = true
 }
+
+/**
+ * 加载物资列表（用于捐赠入库选择）
+ */
+const fetchMaterialList = async () => {
+  materialLoading.value = true
+  try {
+    const res = await getMaterialList({ page: 1, size: 1000 })
+    if (res.code === 200) {
+      materialList.value = res.data.list || []
+    }
+  } catch (error) {
+    console.error('获取物资列表失败', error)
+  } finally {
+    materialLoading.value = false
+  }
+}
+
+// 监听物资选择展开状态，展开时加载物资列表
+watch(showMaterialSelect, (val) => {
+  if (val && materialList.value.length === 0) {
+    fetchMaterialList()
+  }
+})
 
 const confirmApprove = async () => {
   submitting.value = true
@@ -384,13 +502,19 @@ const confirmApprove = async () => {
         remark: approveForm.remark
       })
     } else {
-      res = await approveDonation({
+      // 捐赠审核，传递 targetMaterialId
+      const data = {
         donationId: approveForm.id,
         status: approveForm.status,
         remark: approveForm.remark
-      })
+      }
+      // 如果选择了入库物资，传递 targetMaterialId
+      if (approveForm.targetMaterialId) {
+        data.targetMaterialId = approveForm.targetMaterialId
+      }
+      res = await approveDonation(data)
     }
-    
+
     if (res.code === 200) {
       ElMessage.success('审核完成')
       dialogVisible.value = false
@@ -521,5 +645,12 @@ onMounted(() => {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+}
+
+.filter-bar {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 </style>

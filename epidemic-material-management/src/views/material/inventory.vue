@@ -8,12 +8,6 @@
     <div class="page-header">
       <h2 class="page-title">库存管理</h2>
       <div class="header-actions">
-        <el-button @click="handleExport">
-          <el-icon><Download /></el-icon>导出
-        </el-button>
-        <el-button @click="handleImport">
-          <el-icon><Upload /></el-icon>批量导入
-        </el-button>
         <el-button type="primary" @click="handleAdd">
           <el-icon><Plus /></el-icon>新增物资
         </el-button>
@@ -195,7 +189,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, Upload, Plus, Search, Refresh, Box, Warning, Check, Close } from '@element-plus/icons-vue'
+import { Plus, Search, Refresh, Box, Warning, Check, Close } from '@element-plus/icons-vue'
 import { getMaterialList, addMaterial, updateMaterial, deleteMaterial, createStockOrder } from '@/api/material'
 
 const loading = ref(false)
@@ -495,14 +489,6 @@ const handleSave = async () => {
       saving.value = false
     }
   })
-}
-
-const handleExport = () => {
-  ElMessage.success('导出成功')
-}
-
-const handleImport = () => {
-  ElMessage.info('批量导入功能')
 }
 
 const handleSizeChange = (size) => {

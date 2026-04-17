@@ -5,11 +5,12 @@ import request from '@/utils/request'
  * @param {Object} params - 查询参数
  * @param {number} params.page - 页码
  * @param {number} params.size - 每页大小
+ * @param {string} [params.status] - 新闻状态
  * @returns {Promise} Axios Promise对象
  */
 export const getNewsList = (params) => {
   return request({
-    url: '/stats/news/list',
+    url: '/pandemic/news',
     method: 'get',
     params
   })
@@ -22,7 +23,7 @@ export const getNewsList = (params) => {
  */
 export const getNewsDetail = (id) => {
   return request({
-    url: `/stats/news/${id}`,
+    url: `/pandemic/news/${id}`,
     method: 'get'
   })
 }

@@ -92,11 +92,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { submitDonation, getDonationList } from '@/api/donation'
+import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
+
+// 获取用户 store
+const userStore = useUserStore()
+// 从 store 获取当前用户 ID
+const currentUserId = computed(() => userStore.userInfo?.id)
 
 const donationFormRef = ref(null)
 const submitting = ref(false)
@@ -128,8 +134,8 @@ const donationRules = {
 
 const fetchMyDonations = async () => {
   try {
-    // 假设当前用户ID为1，实际应从store获取
-    const res = await getDonationList({ page: 1, size: 20, donorId: 1 })
+    // 从 store 获取当前用户 ID
+    const res = await getDonationList({ page: 1, size: 20, donorId: currentUserId.value })
     if (res.code === 200) {
       donationList.value = res.data.list || []
     }
@@ -146,7 +152,7 @@ const handleSubmitDonation = async () => {
       try {
         const submitData = {
           ...donationForm,
-          donorId: 1 // Mock User ID
+          donorId: currentUserId.value // 从 store 获取当前用户 ID
         }
         const res = await submitDonation(submitData)
         if (res.code === 200) {

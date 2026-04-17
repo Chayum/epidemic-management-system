@@ -34,9 +34,13 @@
             <div class="stat-value">{{ stat.value }}</div>
             <div class="stat-label">{{ stat.label }}</div>
           </div>
-          <div class="stat-trend" :class="stat.trendType">
-            <el-icon><component :is="stat.trendType === 'up' ? 'ArrowUp' : 'ArrowDown'" /></el-icon>
-            {{ Math.abs(stat.trend) }}%
+          <!-- 仅当有实际趋势时才显示箭头 -->
+          <div class="stat-trend" :class="getTrendClass(stat.trend)" v-if="hasTrend(stat.trend)">
+            <el-icon><component :is="stat.trend > 0 ? 'ArrowUp' : 'ArrowDown'" /></el-icon>
+            {{ formatTrend(stat.trend) }}
+          </div>
+          <div class="stat-trend no-trend" v-else>
+            {{ formatTrend(stat.trend) }}
           </div>
           <div class="stat-bg-icon">
             <el-icon :size="100"><component :is="stat.icon" /></el-icon>
@@ -281,7 +285,7 @@ const loadDashboardData = async () => {
     if (appRes.code === 200) {
       pendingApplications.value = appRes.data.list?.map(item => ({
         id: item.id,
-        applicant: item.applicant,
+        applicant: item.applicantName,
         material: item.materialName,
         quantity: item.quantity,
         time: dayjs(item.applyTime).format('HH:mm')
@@ -497,6 +501,41 @@ const handleResize = () => {
 // ===== 从 screen.vue 移植的工具函数 =====
 
 /**
+ * 格式化趋势百分比
+ * - 值为 0 或 null 时显示 "--"
+ * - 值为 100 时（昨天为0今天有数据）显示 "新增"
+ * - 值为 -100 时（昨天有数据今天为0）显示 "-100%"
+ * - 其他情况显示整数百分比
+ */
+const formatTrend = (trend) => {
+  if (trend === null || trend === undefined || trend === 0) {
+    return '--'
+  }
+  if (trend === 100) {
+    return '新增'
+  }
+  // -100 时显示百分比，不显示"归零"
+  return Math.abs(Math.round(trend)) + '%'
+}
+
+/**
+ * 判断是否有实际趋势值（用于决定是否显示箭头）
+ */
+const hasTrend = (trend) => {
+  return trend !== null && trend !== undefined && trend !== 0
+}
+
+/**
+ * 获取趋势 CSS 类名
+ * - 正数返回 "up"（绿色向上）
+ * - 负数返回 "down"（红色向下）
+ */
+const getTrendClass = (trend) => {
+  if (!hasTrend(trend)) return ''
+  return trend > 0 ? 'up' : 'down'
+}
+
+/**
  * 相对时间格式化
  */
 const formatTime = (timeStr) => {
@@ -704,9 +743,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 2px;
-  
+
   &.up { color: #10b981; }
   &.down { color: #ef4444; }
+  &.no-trend { color: #9ca3af; }
 }
 
 /* ==================== 卡片通用 ==================== */

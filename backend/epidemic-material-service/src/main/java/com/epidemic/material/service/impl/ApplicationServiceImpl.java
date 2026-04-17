@@ -83,6 +83,15 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
             wrapper.eq(Application::getApplicantId, queryDTO.getApplicantId());
         }
 
+        // 关键字搜索：模糊匹配申请单号或物资名称
+        if (StringUtils.hasText(queryDTO.getKeyword())) {
+            wrapper.and(w -> w
+                    .like(Application::getId, queryDTO.getKeyword())
+                    .or()
+                    .like(Application::getMaterialName, queryDTO.getKeyword())
+            );
+        }
+
         // 按申请时间倒序排列
         wrapper.orderByDesc(Application::getApplyTime);
 
@@ -167,7 +176,7 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
             orderDTO.setType("outbound");
             orderDTO.setSourceType("application");
             orderDTO.setSourceId(application.getId());
-            orderDTO.setDepartment(application.getDepartment()); // 领用部门/单位
+            orderDTO.setDepartment(application.getApplicantUnit()); // 领用部门/单位
             orderDTO.setRemark("申领出库: " + application.getPurpose());
             
             StockOrderDTO.StockOrderItemDTO itemDTO = new StockOrderDTO.StockOrderItemDTO();

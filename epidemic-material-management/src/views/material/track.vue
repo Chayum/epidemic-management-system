@@ -233,6 +233,11 @@ const fetchList = async () => {
       params.statuses = 'approved,delivered,received'
     }
 
+    // 关键字搜索：申请单号或物资名称
+    if (queryParams.keyword) {
+      params.keyword = queryParams.keyword
+    }
+
     // 根据角色调用不同的 API
     let res
     if (isAdmin.value) {

@@ -1,5 +1,7 @@
 package com.epidemic.common.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -18,6 +20,7 @@ public class OperateLog implements Serializable {
     /**
      * 日志ID
      */
+    @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
     /**
