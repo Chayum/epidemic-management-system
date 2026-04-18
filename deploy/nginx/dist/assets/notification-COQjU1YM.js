@@ -1,0 +1,1 @@
+import{W as e}from"./index-D2Ap5L_9.js";const n=t=>e({url:"/notification/user",method:"get",params:t}),r=()=>e({url:"/notification/unread-count",method:"get"}),a=t=>e({url:`/notification/${t}/read`,method:"put"}),i=()=>e({url:"/notification/read-all",method:"put"}),u=t=>e({url:`/notification/${t}`,method:"delete"});export{n as a,i as b,u as d,r as g,a as m};

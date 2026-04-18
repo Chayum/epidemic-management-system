@@ -1,0 +1,1 @@
+import{W as e}from"./index-D2Ap5L_9.js";const a=t=>e({url:"/material/list",method:"get",params:t}),o=t=>e({url:"/material",method:"post",data:t}),s=t=>e({url:"/material",method:"put",data:t}),l=t=>e({url:`/material/${t}`,method:"delete"}),u=t=>e({url:"/stock/order",method:"post",data:t});export{o as a,u as c,l as d,a as g,s as u};

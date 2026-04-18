@@ -38,5 +38,9 @@ logs/
 *.jar
 *.war
 
+# Exception: allow deploy artifacts
+!deploy/**/*.jar
+!deploy/**/dist/
+
 # Large files
 nacos/nacos.tar

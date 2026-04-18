@@ -1,0 +1,1 @@
+import{W as o}from"./index-D2Ap5L_9.js";const r=t=>o({url:"/donation/list",method:"get",params:t}),e=t=>o({url:"/donation",method:"post",data:t}),s=t=>o({url:"/donation/approve",method:"post",data:t}),a=t=>o({url:"/donation/my",method:"get",params:t});export{r as a,s as b,a as g,e as s};
