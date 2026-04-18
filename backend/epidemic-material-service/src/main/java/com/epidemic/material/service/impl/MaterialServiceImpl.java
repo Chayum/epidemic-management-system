@@ -13,6 +13,7 @@ import com.epidemic.material.service.CacheService;
 import com.epidemic.material.service.InventoryLogService;
 import com.epidemic.material.service.MaterialService;
 import com.epidemic.material.util.DistributedLockUtil;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -43,6 +44,45 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
 
     @Autowired
     private DistributedLockUtil distributedLockUtil;
+
+    /**
+     * 应用启动时预热缓存
+     * 加载物资类型、仓库等基础配置数据到 Redis
+     */
+    @PostConstruct
+    public void warmUpCache() {
+        try {
+            log.info("开始缓存预热...");
+
+            // 预热物资类型列表
+            List<Map<String, String>> typeList = MaterialTypeEnum.toList();
+            cacheService.setMaterialTypes(typeList);
+            log.info("物资类型缓存预热完成，共 {} 种", typeList.size());
+
+            // 预热仓库列表
+            List<String> warehouses = baseMapper.selectMaps(new LambdaQueryWrapper<Material>()
+                    .select(Material::getWarehouse)
+                    .groupBy(Material::getWarehouse))
+                    .stream()
+                    .map(m -> (String) m.get("warehouse"))
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            List<Map<String, Object>> warehouseList = warehouses.stream().map(warehouse -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("name", warehouse);
+                return map;
+            }).collect(Collectors.toList());
+
+            cacheService.setWarehouses(warehouseList);
+            log.info("仓库列表缓存预热完成，共 {} 个", warehouseList.size());
+
+            log.info("缓存预热完成");
+        } catch (Exception e) {
+            log.warn("缓存预热失败，将在首次访问时加载: {}", e.getMessage());
+        }
+    }
 
     /**
      * 分页查询物资列表

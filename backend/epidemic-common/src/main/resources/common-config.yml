@@ -14,6 +14,28 @@ spring:
           min-idle: 0
           max-wait: -1ms
 
+# ==================== RabbitMQ 公共配置 ====================
+  rabbitmq:
+    host: 192.168.150.100
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+    # 消息确认机制
+    publisher-confirm-type: correlated   # 发布确认
+    publisher-returns: true              # 发布返回
+    # 消费者配置
+    listener:
+      simple:
+        acknowledge-mode: manual         # 手动确认
+        prefetch: 10                     # 预取数量
+        retry:
+          enabled: true                  # 启用重试
+          max-attempts: 3                # 最大重试3次
+          initial-interval: 1000         # 初始间隔1秒
+          multiplier: 2                  # 间隔倍增
+          max-interval: 10000            # 最大间隔10秒
+
 # ==================== Nacos 公共配置 ====================
   cloud:
     nacos:

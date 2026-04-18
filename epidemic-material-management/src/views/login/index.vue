@@ -81,17 +81,73 @@
         </el-form-item>
       </el-form>
       
-      <div class="login-footer">
-        <div v-if="isUserLogin" class="footer-links">
-          <el-link type="primary" :underline="false">帮助中心</el-link>
-          <el-divider direction="vertical" />
-          <el-link type="primary" :underline="false">隐私政策</el-link>
-          <el-divider direction="vertical" />
-          <el-link type="primary" :underline="false">服务条款</el-link>
-        </div>
-        <p class="copyright">© 2026 疫情防控指挥部 · 版权所有</p>
+      <!-- 底部区域：用户登录模式下显示注册入口 -->
+      <div v-if="isUserLogin" class="login-footer">
+        <span class="register-tip">还没有账号？</span>
+        <el-link type="primary" @click="showRegister = true">立即注册</el-link>
       </div>
     </div>
+
+    <!-- 注册弹窗 -->
+    <el-dialog
+      v-model="showRegister"
+      title="注册新账号"
+      width="450px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <el-form
+        ref="registerFormRef"
+        :model="registerForm"
+        :rules="registerRules"
+        label-width="80px"
+      >
+        <!-- 用户名 -->
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="registerForm.username" placeholder="3-20位字母数字下划线" />
+        </el-form-item>
+
+        <!-- 姓名 -->
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="registerForm.name" placeholder="请输入真实姓名" />
+        </el-form-item>
+
+        <!-- 密码 -->
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="registerForm.password" type="password" placeholder="6-20位密码" show-password />
+        </el-form-item>
+
+        <!-- 确认密码 -->
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="registerForm.confirmPassword" type="password" placeholder="再次输入密码" show-password />
+        </el-form-item>
+
+        <!-- 手机号 -->
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="registerForm.phone" placeholder="请输入手机号" />
+        </el-form-item>
+
+        <!-- 所属单位（选填） -->
+        <el-form-item label="所属单位" prop="unit">
+          <el-input v-model="registerForm.unit" placeholder="医院/社区/企业名称（选填）" />
+        </el-form-item>
+
+        <!-- 角色选择 -->
+        <el-form-item label="角色" prop="role">
+          <el-radio-group v-model="registerForm.role">
+            <el-radio value="applicant">申请方（医院/社区）</el-radio>
+            <el-radio value="donor">捐赠方（个人/企业）</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="showRegister = false">取消</el-button>
+        <el-button type="primary" :loading="registerLoading" @click="handleRegister">
+          {{ registerLoading ? '注册中...' : '立即注册' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -101,6 +157,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores'
 import { ElMessage } from 'element-plus'
 import { Lock, User, FirstAidKit, Switch, UserFilled } from '@element-plus/icons-vue'
+import { register } from '@/api/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -131,6 +188,64 @@ const loginForm = reactive({
   username: '',
   password: ''
 })
+
+// 注册相关状态
+const showRegister = ref(false) // 控制注册弹窗显示
+const registerLoading = ref(false) // 注册按钮加载状态
+const registerFormRef = ref(null) // 注册表单引用
+
+// 注册表单数据
+const registerForm = reactive({
+  username: '',
+  password: '',
+  confirmPassword: '',
+  name: '',
+  phone: '',
+  unit: '',
+  role: 'applicant' // 默认申请方
+})
+
+// 注册表单校验规则
+const registerRules = {
+  // 用户名校验：必填、3-20位、只能包含字母数字下划线
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '用户名长度3-20位', trigger: 'blur' },
+    { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字、下划线', trigger: 'blur' }
+  ],
+  // 姓名校验：必填
+  name: [
+    { required: true, message: '请输入姓名', trigger: 'blur' }
+  ],
+  // 密码校验：必填、6-20位
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '密码长度6-20位', trigger: 'blur' }
+  ],
+  // 确认密码校验：必填、需与密码一致
+  confirmPassword: [
+    { required: true, message: '请确认密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value !== registerForm.password) {
+          callback(new Error('两次输入的密码不一致'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
+  ],
+  // 手机号校验：必填、格式正确
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  // 角色校验：必填
+  role: [
+    { required: true, message: '请选择角色', trigger: 'change' }
+  ]
+}
 
 // 根据路由参数判断当前是否为用户登录模式
 // query.type === 'user' 表示用户端登录，否则默认为管理端
@@ -171,32 +286,74 @@ const loginRules = {
  */
 const handleLogin = async () => {
   if (!loginFormRef.value) return
-  
+
   await loginFormRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true
       try {
         // 确定角色：如果是用户登录模式，使用选中的角色；否则（管理员模式）固定为 admin
         const role = isUserLogin.value ? selectedRole.value : 'admin'
-        
+
         await userStore.login({
           username: loginForm.username,
           password: loginForm.password,
           role: role
         })
-        
+
         ElMessage.success('登录成功')
-        
+
         // 根据角色跳转不同首页
         // 管理员 -> /dashboard
         // 普通用户 -> /user/home
         const targetPath = role === 'admin' ? '/dashboard' : '/user/home'
         router.push(targetPath)
-        
+
       } catch (error) {
         ElMessage.error(error.message || '登录失败，请检查用户名密码')
       } finally {
         loading.value = false
+      }
+    }
+  })
+}
+
+/**
+ * 处理注册逻辑
+ * 1. 校验表单
+ * 2. 调用注册 API
+ * 3. 注册成功后关闭弹窗并自动填充用户名
+ */
+const handleRegister = async () => {
+  if (!registerFormRef.value) return
+
+  await registerFormRef.value.validate(async (valid) => {
+    if (valid) {
+      registerLoading.value = true
+      try {
+        // 调用注册接口
+        await register({
+          username: registerForm.username,
+          password: registerForm.password,
+          name: registerForm.name,
+          phone: registerForm.phone,
+          unit: registerForm.unit || undefined,
+          role: registerForm.role
+        })
+
+        ElMessage.success('注册成功，请登录')
+        showRegister.value = false
+
+        // 自动填充用户名便于登录
+        loginForm.username = registerForm.username
+        loginForm.password = ''
+
+        // 重置注册表单
+        registerFormRef.value.resetFields()
+
+      } catch (error) {
+        ElMessage.error(error.message || '注册失败')
+      } finally {
+        registerLoading.value = false
       }
     }
   })
@@ -401,22 +558,22 @@ const handleLogin = async () => {
   }
 }
 
+// 底部注册入口样式
 .login-footer {
   text-align: center;
   margin-top: 24px;
-  
-  .footer-links {
-    margin-bottom: 12px;
-    .el-link {
-      font-size: 12px;
-      color: #8c8c8c;
-      &:hover { color: #1890ff; }
-    }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  .register-tip {
+    font-size: 13px;
+    color: #8c8c8c;
   }
 
-  .copyright {
-    font-size: 12px;
-    color: #bfbfbf;
+  .el-link {
+    font-size: 13px;
   }
 }
 </style>

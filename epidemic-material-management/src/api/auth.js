@@ -17,6 +17,25 @@ export const login = (data) => {
 }
 
 /**
+ * 用户注册
+ * @param {Object} data - 注册数据
+ * @param {string} data.username - 用户名
+ * @param {string} data.password - 密码
+ * @param {string} data.name - 姓名
+ * @param {string} data.phone - 手机号
+ * @param {string} [data.unit] - 所属单位
+ * @param {string} data.role - 角色（applicant/donor）
+ * @returns {Promise} Axios Promise对象
+ */
+export const register = (data) => {
+  return request({
+    url: '/auth/register',
+    method: 'post',
+    data
+  })
+}
+
+/**
  * 用户登出
  * @returns {Promise} Axios Promise对象
  */

@@ -5,6 +5,7 @@ import com.epidemic.common.result.Result;
 import com.epidemic.common.util.UserContext;
 import com.epidemic.common.annotation.OperateLog;
 import com.epidemic.user.dto.LoginRequest;
+import com.epidemic.user.dto.RegisterRequest;
 import com.epidemic.user.entity.User;
 import com.epidemic.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -190,8 +191,6 @@ public class AuthController {
 
     /**
      * 获取当前用户信息
-     *
-     * @param userIdStr 网关透传的用户ID
      * @return 用户详情（不含密码）
      */
     @Operation(summary = "获取当前用户信息")
@@ -225,7 +224,8 @@ public class AuthController {
             return Result.error("密码不能为空");
         }
 
-        User user = userService.getUserById(userId);
+        // 从数据库直接获取用户信息（需要密码，不能用缓存）
+        User user = userService.getById(userId);
 
         // 校验原密码
         if (!passwordEncoder.matches(oldPwd, user.getPassword())) {
@@ -275,5 +275,52 @@ public class AuthController {
 
         userService.updateUser(user);
         return Result.success("更新成功");
+    }
+
+    /**
+     * 用户注册接口
+     * 仅允许注册申请方或捐赠方账号，禁止注册管理员
+     *
+     * @param registerRequest 注册请求参数
+     * @return 注册结果
+     */
+    @Operation(summary = "用户注册")
+    @PostMapping("/register")
+    @OperateLog(module = "认证管理", operation = "用户注册")
+    public Result<String> register(@Valid @RequestBody RegisterRequest registerRequest) {
+        String username = registerRequest.getUsername();
+
+        // 检查用户名是否已存在
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getUsername, username);
+        User existUser = userService.getOne(wrapper);
+
+        if (existUser != null) {
+            return Result.error("用户名已存在");
+        }
+
+        // 检查手机号是否已被使用
+        LambdaQueryWrapper<User> phoneWrapper = new LambdaQueryWrapper<>();
+        phoneWrapper.eq(User::getPhone, registerRequest.getPhone());
+        User phoneUser = userService.getOne(phoneWrapper);
+
+        if (phoneUser != null) {
+            return Result.error("该手机号已被注册");
+        }
+
+        // 创建用户
+        User user = new User();
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        user.setName(registerRequest.getName());
+        user.setPhone(registerRequest.getPhone());
+        user.setUnit(registerRequest.getUnit());
+        user.setRole(registerRequest.getRole());
+        user.setStatus("active"); // 默认激活
+
+        userService.addUser(user);
+        log.info("用户 {} 注册成功，角色：{}", username, registerRequest.getRole());
+
+        return Result.success("注册成功");
     }
 }

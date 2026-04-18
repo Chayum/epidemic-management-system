@@ -7,6 +7,7 @@ import com.epidemic.common.result.PageResult;
 import com.epidemic.user.dto.UserQueryDTO;
 import com.epidemic.user.entity.User;
 import com.epidemic.user.mapper.UserMapper;
+import com.epidemic.user.service.UserCacheService;
 import com.epidemic.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,8 +27,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
-
     private final UserMapper userMapper;
+
+    // 用户缓存服务
+    private final UserCacheService userCacheService;
 
     /**
      * 分页查询用户列表
@@ -53,14 +56,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     /**
-     * 根据ID获取用户详情
+     * 根据ID获取用户详情（优先从缓存获取）
      *
      * @param id 用户ID
      * @return 用户实体
      */
     @Override
     public User getUserById(Long id) {
-        return userMapper.selectById(id);
+        return userCacheService.getUserById(id);
     }
 
     /**
@@ -81,7 +84,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     /**
      * 更新用户信息
-     * 自动更新修改时间
+     * 自动更新修改时间，并清除缓存
      *
      * @param user 包含更新字段的用户对象
      */
@@ -89,6 +92,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public void updateUser(User user) {
         user.setUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
+        // 清除用户缓存
+        userCacheService.evictUser(user.getId());
     }
 
     /**
@@ -99,6 +104,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public void deleteUser(Long id) {
         userMapper.deleteById(id);
+        // 清除用户缓存
+        userCacheService.evictUser(id);
     }
 
     /**
@@ -115,6 +122,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setStatus(status);
         user.setUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
+        // 清除用户缓存
+        userCacheService.evictUser(id);
     }
 
     /**

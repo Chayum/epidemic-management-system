@@ -14,6 +14,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * RabbitMQ 配置类
  * 统一管理日志队列配置，供所有微服务共享
@@ -24,8 +27,10 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(name = "spring.rabbitmq.host")
 public class RabbitMQConfig {
 
+    // ==================== 日志队列配置 ====================
+
     /**
-     * 创建交换机
+     * 创建日志交换机
      */
     @Bean
     public DirectExchange logExchange() {
@@ -33,19 +38,50 @@ public class RabbitMQConfig {
     }
 
     /**
-     * 创建队列
+     * 创建日志队列（配置死信队列）
      */
     @Bean
     public Queue logQueue() {
-        return new Queue(LogConstants.LOG_QUEUE, true);
+        Map<String, Object> args = new HashMap<>();
+        // 配置死信交换机
+        args.put("x-dead-letter-exchange", LogConstants.LOG_DLX_EXCHANGE);
+        // 配置死信路由键
+        args.put("x-dead-letter-routing-key", LogConstants.LOG_DLX_ROUTING_KEY);
+        return new Queue(LogConstants.LOG_QUEUE, true, false, false, args);
     }
 
     /**
-     * 绑定队列到交换机
+     * 绑定日志队列到交换机
      */
     @Bean
     public Binding logBinding(Queue logQueue, DirectExchange logExchange) {
         return BindingBuilder.bind(logQueue).to(logExchange).with(LogConstants.LOG_ROUTING_KEY);
+    }
+
+    // ==================== 日志死信队列配置 ====================
+
+    /**
+     * 创建日志死信交换机
+     */
+    @Bean
+    public DirectExchange logDlxExchange() {
+        return new DirectExchange(LogConstants.LOG_DLX_EXCHANGE);
+    }
+
+    /**
+     * 创建日志死信队列
+     */
+    @Bean
+    public Queue logDlxQueue() {
+        return new Queue(LogConstants.LOG_DLX_QUEUE, true);
+    }
+
+    /**
+     * 绑定日志死信队列到死信交换机
+     */
+    @Bean
+    public Binding logDlxBinding(Queue logDlxQueue, DirectExchange logDlxExchange) {
+        return BindingBuilder.bind(logDlxQueue).to(logDlxExchange).with(LogConstants.LOG_DLX_ROUTING_KEY);
     }
 
     // ==================== 推送队列配置 ====================
@@ -59,11 +95,16 @@ public class RabbitMQConfig {
     }
 
     /**
-     * 创建推送队列
+     * 创建推送队列（配置死信队列）
      */
     @Bean
     public Queue pushQueue() {
-        return new Queue(LogConstants.PUSH_QUEUE, true);
+        Map<String, Object> args = new HashMap<>();
+        // 配置死信交换机
+        args.put("x-dead-letter-exchange", LogConstants.PUSH_DLX_EXCHANGE);
+        // 配置死信路由键
+        args.put("x-dead-letter-routing-key", LogConstants.PUSH_DLX_ROUTING_KEY);
+        return new Queue(LogConstants.PUSH_QUEUE, true, false, false, args);
     }
 
     /**
@@ -73,6 +114,34 @@ public class RabbitMQConfig {
     public Binding pushBinding(Queue pushQueue, DirectExchange pushExchange) {
         return BindingBuilder.bind(pushQueue).to(pushExchange).with(LogConstants.PUSH_ROUTING_KEY);
     }
+
+    // ==================== 推送死信队列配置 ====================
+
+    /**
+     * 创建推送死信交换机
+     */
+    @Bean
+    public DirectExchange pushDlxExchange() {
+        return new DirectExchange(LogConstants.PUSH_DLX_EXCHANGE);
+    }
+
+    /**
+     * 创建推送死信队列
+     */
+    @Bean
+    public Queue pushDlxQueue() {
+        return new Queue(LogConstants.PUSH_DLX_QUEUE, true);
+    }
+
+    /**
+     * 绑定推送死信队列到死信交换机
+     */
+    @Bean
+    public Binding pushDlxBinding(Queue pushDlxQueue, DirectExchange pushDlxExchange) {
+        return BindingBuilder.bind(pushDlxQueue).to(pushDlxExchange).with(LogConstants.PUSH_DLX_ROUTING_KEY);
+    }
+
+    // ==================== 通用配置 ====================
 
     /**
      * JSON 消息转换器

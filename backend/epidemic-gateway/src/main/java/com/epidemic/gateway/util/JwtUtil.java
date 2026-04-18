@@ -101,4 +101,32 @@ public class JwtUtil {
             return false;
         }
     }
+
+    /**
+     * 获取 Token 的过期时间（毫秒时间戳）
+     */
+    public Long getExpirationFromToken(String token) {
+        try {
+            Claims claims = getClaimsFromToken(token);
+            return claims.getExpiration().getTime();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 获取 Token 的剩余有效时间（秒）
+     */
+    public Long getRemainingTime(String token) {
+        try {
+            Long expiration = getExpirationFromToken(token);
+            if (expiration == null) {
+                return 0L;
+            }
+            long remaining = (expiration - System.currentTimeMillis()) / 1000;
+            return remaining > 0 ? remaining : 0L;
+        } catch (Exception e) {
+            return 0L;
+        }
+    }
 }

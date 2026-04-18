@@ -12,7 +12,6 @@
             <el-avatar :size="120" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
               {{ userInfo.name?.charAt(0) || '管' }}
             </el-avatar>
-            <el-button type="primary" link class="change-avatar-btn">更换头像</el-button>
           </div>
           
           <div class="user-basic-info">
@@ -375,11 +374,6 @@ onMounted(() => {
 
 .avatar-section {
   margin-bottom: 20px;
-  
-  .change-avatar-btn {
-    display: block;
-    margin: 12px auto 0;
-  }
 }
 
 .user-basic-info {

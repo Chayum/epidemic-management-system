@@ -12,6 +12,7 @@ import com.epidemic.material.service.CacheService;
 import com.epidemic.material.service.InventoryLogService;
 import com.epidemic.material.service.MaterialService;
 import com.epidemic.material.service.StockService;
+import com.epidemic.material.service.WarningPublisher;
 import com.epidemic.material.util.DistributedLockUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,10 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
 
     @Autowired
     private DistributedLockUtil distributedLockUtil;
+
+    // 预警消息发布服务
+    @Autowired
+    private WarningPublisher warningPublisher;
 
     @Override
     public Page<InventoryLedgerVO> getInventoryLedger(Integer page, Integer size, String keyword) {
@@ -271,8 +276,15 @@ public class StockServiceImpl extends ServiceImpl<StockOrderMapper, StockOrder> 
     private void checkWarningStatus(Material material) {
         if (material.getStock() < material.getThreshold()) {
             material.setStatus("warning");
-            // 这里可以触发预警通知，例如发送消息给管理员
             log.warn("物资库存预警: {} 当前库存: {}", material.getName(), material.getStock());
+
+            // 发布预警消息到 Redis 频道
+            warningPublisher.publishWarning(
+                    material.getId(),
+                    material.getName(),
+                    material.getStock(),
+                    material.getThreshold()
+            );
         } else {
             if ("warning".equals(material.getStatus())) {
                 material.setStatus("normal");

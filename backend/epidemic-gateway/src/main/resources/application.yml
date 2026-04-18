@@ -64,3 +64,17 @@ auth:
     - /swagger-ui.html
     - /webjars/**
     - /v3/api-docs/**
+
+# 限流配置
+rate-limit:
+  enabled: true
+  global-limit: 1000      # 全局限流：每秒最大请求数
+  user-limit: 100         # 用户限流：每分钟最大请求数
+  ip-limit: 200           # IP 限流：每分钟最大请求数
+  whitelist:
+    - /api/auth/login
+    - /api/auth/register
+    - /doc.html
+    - /swagger-ui.html
+    - /webjars/**
+    - /v3/api-docs/**

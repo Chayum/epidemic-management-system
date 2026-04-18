@@ -4,6 +4,7 @@ import com.epidemic.gateway.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.factory.rewrite.RewriteFunction;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,10 @@ public class LoginResponseRewriteFunction implements RewriteFunction<Map, Map> {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    // 从配置文件读取 JWT 过期时间（毫秒）
+    @Value("${jwt.expiration}")
+    private Long jwtExpiration;
 
     @Override
     public Publisher<Map> apply(ServerWebExchange exchange, Map body) {
@@ -71,12 +76,12 @@ public class LoginResponseRewriteFunction implements RewriteFunction<Map, Map> {
 
             if (userId != null && username != null) {
                 String token = jwtUtil.generateToken(userId, username, role);
-                
-                // 将 Token 存储到 Redis，key 格式：auth:token:{userId}
+
+                // 将 Token 存储到 Redis，过期时间从配置读取（毫秒转秒）
                 String tokenKey = "auth:token:" + userId;
-                long expirationSeconds = 7200; // 2 小时，与 JWT 过期时间一致
+                long expirationSeconds = jwtExpiration / 1000;
                 redisTemplate.opsForValue().set(tokenKey, token, expirationSeconds, TimeUnit.SECONDS);
-                log.info("Token stored in Redis for user: {}, key: {}", username, tokenKey);
+                log.info("Token stored in Redis for user: {}, key: {}, TTL: {}s", username, tokenKey, expirationSeconds);
                 
                 // 构建 LoginResponse 结构
                 Map<String, Object> loginResponse = new LinkedHashMap<>();

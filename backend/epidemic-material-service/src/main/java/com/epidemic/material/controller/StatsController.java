@@ -12,10 +12,13 @@ import com.epidemic.material.service.ApplicationService;
 import com.epidemic.material.service.DonationService;
 import com.epidemic.material.service.InventoryLogService;
 import com.epidemic.material.service.MaterialService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -25,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +39,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/stats")
 @CrossOrigin
+@Slf4j
 public class StatsController {
 
     @Autowired
@@ -51,6 +56,17 @@ public class StatsController {
 
     @Autowired
     private LogFeignClient logFeignClient;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    // JSON 序列化工具
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // 仪表盘缓存 Key
+    private static final String DASHBOARD_CACHE_KEY = "api:cache:dashboard:full";
+    // 缓存时间：30 秒
+    private static final long CACHE_TTL = 30;
 
     /**
      * 获取管理端仪表盘综合统计数据
@@ -261,14 +277,46 @@ public class StatsController {
     /**
      * 获取实时数据大屏综合数据
      * 包含核心指标、物资分类统计、趋势数据、区域分布、预警信息、实时动态等
+     * 使用 Redis 缓存，减少数据库查询压力
      *
      * @return 实时数据大屏 VO
      */
     @Operation(summary = "获取实时数据大屏数据")
     @GetMapping("/dashboard/full")
     public Result<DashboardVO> getFullDashboard() {
+        // 尝试从 Redis 缓存获取
+        try {
+            Object cached = redisTemplate.opsForValue().get(DASHBOARD_CACHE_KEY);
+            if (cached != null) {
+                log.debug("仪表盘数据缓存命中");
+                DashboardVO dashboard = objectMapper.convertValue(cached, DashboardVO.class);
+                return Result.success(dashboard);
+            }
+        } catch (Exception e) {
+            log.warn("读取仪表盘缓存失败：{}", e.getMessage());
+        }
+
+        // 缓存未命中，构建数据
+        log.debug("仪表盘数据缓存未命中，开始构建");
+        DashboardVO dashboard = buildDashboardData();
+
+        // 存入缓存
+        try {
+            redisTemplate.opsForValue().set(DASHBOARD_CACHE_KEY, dashboard, CACHE_TTL, TimeUnit.SECONDS);
+            log.info("仪表盘数据已缓存，TTL={}s", CACHE_TTL);
+        } catch (Exception e) {
+            log.warn("缓存仪表盘数据失败：{}", e.getMessage());
+        }
+
+        return Result.success(dashboard);
+    }
+
+    /**
+     * 构建仪表盘数据
+     */
+    private DashboardVO buildDashboardData() {
         DashboardVO dashboard = new DashboardVO();
-        
+
         // 1. 核心指标
         DashboardVO.CoreMetrics coreMetrics = new DashboardVO.CoreMetrics();
         coreMetrics.setTotalMaterials(materialService.count());
@@ -292,10 +340,10 @@ public class StatsController {
 
         // 待审核申请和捐赠
         Map<String, Object> appStats = applicationService.getStats();
-        coreMetrics.setPendingApplications(appStats.get("pendingCount") != null ? (Long) appStats.get("pendingCount") : 0L);
+        coreMetrics.setPendingApplications(appStats.get("pendingCount") != null ? ((Number) appStats.get("pendingCount")).longValue() : 0L);
 
         Map<String, Object> donationStats = donationService.getStats();
-        coreMetrics.setPendingDonations(donationStats.get("pendingCount") != null ? (Long) donationStats.get("pendingCount") : 0L);
+        coreMetrics.setPendingDonations(donationStats.get("pendingCount") != null ? ((Number) donationStats.get("pendingCount")).longValue() : 0L);
 
         // 库存预警
         List<Map<String, Object>> warningList = materialService.getWarningList();
@@ -309,26 +357,26 @@ public class StatsController {
         coreMetrics.setTotalDonationAmount(donationService.getTotalAmount());
 
         dashboard.setCoreMetrics(coreMetrics);
-        
+
         // 2. 物资分类统计
         dashboard.setMaterialCategoryStats(buildMaterialCategoryStats());
-        
+
         // 3. 趋势数据
         dashboard.setTrendData(buildTrendData("week"));
-        
+
         // 4. 区域统计（需要实现）
         dashboard.setRegionStats(buildRegionStats());
-        
+
         // 5. 预警列表
         dashboard.setWarningList(buildWarningList(warningList));
-        
+
         // 6. 实时动态
         dashboard.setRealtimeActivities(buildRealtimeActivities());
 
         // 7. 近期操作日志
         dashboard.setOperationLogs(buildOperationLogs());
 
-        return Result.success(dashboard);
+        return dashboard;
     }
     
     /**
@@ -442,8 +490,8 @@ public class StatsController {
                     DashboardVO.WarningItem warningItem = new DashboardVO.WarningItem();
                     warningItem.setMaterialId(item.get("id") != null ? item.get("id").toString() : "");
                     warningItem.setMaterialName((String) item.get("name"));
-                    warningItem.setCurrentStock(item.get("stock") != null ? (Integer) item.get("stock") : 0);
-                    warningItem.setWarningThreshold(item.get("threshold") != null ? (Integer) item.get("threshold") : 0);
+                    warningItem.setCurrentStock(item.get("stock") != null ? ((Number) item.get("stock")).intValue() : 0);
+                    warningItem.setWarningThreshold(item.get("threshold") != null ? ((Number) item.get("threshold")).intValue() : 0);
             
                     // 计算预警级别
                     int stock = warningItem.getCurrentStock();
